@@ -1,96 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Mathews Mechanical brand theme */
+    /* Primary: Bold Red #E31E24 */
+    /* Secondary: Deep Navy/Charcoal #4A555D */
+    --background: 210 15% 97%;
+    --foreground: 207 12% 33%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 207 12% 33%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 207 12% 33%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Mathews Red */
+    --primary: 229 84% 4.902%;
+    --primary-foreground: 210 11% 15%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Deep Navy/Charcoal */
+    --secondary: 207 12% 33%;
+    --secondary-foreground: 208 7% 46%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 207 8% 50%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent stays green for positive indicators */
+    --accent: 211 100% 50%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 358 78% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 358 78% 50%;
 
     --radius: 0.5rem;
 
+    /* Custom tokens for dashboard */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Metric card gradients - Mathews brand */
+    --gradient-red: linear-gradient(135deg, hsl(358 78% 50%) 0%, hsl(358 70% 60%) 100%);
+    --gradient-navy: linear-gradient(135deg, hsl(207 12% 33%) 0%, hsl(207 15% 45%) 100%);
+    --gradient-green: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(158 64% 52%) 100%);
+    --gradient-gray: linear-gradient(135deg, hsl(207 8% 50%) 0%, hsl(207 10% 60%) 100%);
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(207 12% 33% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(207 12% 33% / 0.1), 0 2px 4px -2px hsl(207 12% 33% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(207 12% 33% / 0.1), 0 4px 6px -4px hsl(207 12% 33% / 0.1);
+    --shadow-card: 0 1px 3px 0 hsl(207 12% 33% / 0.1), 0 1px 2px -1px hsl(207 12% 33% / 0.1);
+
     --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-foreground: 207 12% 33%;
+    --sidebar-primary: 358 78% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 94%;
+    --sidebar-accent-foreground: 207 12% 33%;
+    --sidebar-border: 210 20% 88%;
+    --sidebar-ring: 358 78% 50%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 207 15% 8%;
+    --foreground: 210 20% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 207 12% 12%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 207 12% 12%;
+    --popover-foreground: 210 20% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 358 78% 55%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 207 12% 20%;
+    --secondary-foreground: 210 20% 95%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 207 12% 18%;
+    --muted-foreground: 207 10% 60%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 142 71% 45%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 358 70% 45%;
+    --destructive-foreground: 210 20% 95%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 207 12% 18%;
+    --input: 207 12% 18%;
+    --ring: 358 78% 55%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --sidebar-background: 207 12% 10%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 358 78% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 207 12% 15%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 207 12% 15%;
+    --sidebar-ring: 358 78% 55%;
   }
 }
 
@@ -100,6 +125,71 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  .metric-card {
+    @apply relative overflow-hidden rounded-lg p-5;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .metric-card-red {
+    background: linear-gradient(135deg, hsl(358 78% 50%) 0%, hsl(358 70% 60%) 100%);
+  }
+
+  .metric-card-navy {
+    background: linear-gradient(135deg, hsl(207 12% 33%) 0%, hsl(207 15% 45%) 100%);
+  }
+
+  .metric-card-green {
+    background: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(158 64% 52%) 100%);
+  }
+
+  .metric-card-gray {
+    background: linear-gradient(135deg, hsl(207 8% 50%) 0%, hsl(207 10% 60%) 100%);
+  }
+
+  .data-card {
+    @apply bg-card rounded-xl border shadow-sm;
+    box-shadow: var(--shadow-card);
+  }
+
+  .section-title {
+    @apply text-lg font-semibold text-foreground mb-4;
+  }
+
+  .stat-label {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold text-foreground;
+  }
+
+  .badge-quality {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success;
+  }
+
+  .badge-low-quality {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive;
+  }
+
+  .badge-pending {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning;
+  }
+
+  .summary-box {
+    @apply bg-primary/5 border border-primary/20 rounded-xl p-5;
   }
 }

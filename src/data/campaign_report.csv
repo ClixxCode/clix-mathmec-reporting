@@ -1,0 +1,22 @@
+Location,Campaign,Cost,Impressions,Clicks,CTR,Avg. CPC,Conversions,Conv. Rate,Cost / Conv.,Location Total Cost,Location % of Budget
+Newark,Metal Fabrication | All Geos,849.12,2959,337,11.39%,2.52,8,2.37%,106.14,"$1,436.21",51.04%
+Newark,Fall Protection | All Geos,284.91,978,59,6.03%,4.83,1,1.69%,284.91,"$1,436.21",51.04%
+Newark,Industrial Piping | All Geos,209.78,623,31,4.98%,6.77,0,0%,0,"$1,436.21",51.04%
+Newark,Metal Fabrication | PMAX,92.4,2911,95,3.26%,0.97,3,0.9%,30.8,"$1,436.21",51.04%
+Newark,** LOCATION TOTAL **,1436.21,7471,522,6.99%,2.75,12,2.30%,119.68,"$1,436.21",51.04%
+Denver,Fall Protection | All Geos,129.23,555,29,5.23%,4.46,0,0%,0,$338.93,12.05%
+Denver,Metal Fabrication | All Geos,95.11,254,30,11.81%,3.17,2,6.67%,47.56,$338.93,12.05%
+Denver,Industrial Piping | All Geos,76.88,366,15,4.1%,5.13,0,0%,0,$338.93,12.05%
+Denver,Metal Fabrication | PMAX,37.71,1327,42,3.17%,0.9,0,0%,0,$338.93,12.05%
+Denver,** LOCATION TOTAL **,338.93,2502,116,4.64%,2.92,2,1.72%,169.47,$338.93,12.05%
+Portland,Metal Fabrication | All Geos,137.33,520,54,10.38%,2.54,2,3.7%,68.67,$370.70,13.17%
+Portland,Fall Protection | All Geos,122.15,427,27,6.32%,4.52,0,0%,0,$370.70,13.17%
+Portland,Industrial Piping | All Geos,61.15,201,10,4.98%,6.12,0,0%,0,$370.70,13.17%
+Portland,Metal Fabrication | PMAX,50.07,946,36,3.81%,1.39,0,0%,0,$370.70,13.17%
+Portland,** LOCATION TOTAL **,370.70,2094,127,6.06%,2.92,2,1.57%,185.35,$370.70,13.17%
+Seattle,Metal Fabrication | All Geos,345.49,1047,125,11.94%,2.76,1,0.8%,345.49,$668.01,23.74%
+Seattle,Fall Protection | All Geos,192.9,752,48,6.38%,4.02,1,2.08%,192.9,$668.01,23.74%
+Seattle,Industrial Piping | All Geos,89.85,325,15,4.62%,5.99,1,6.67%,89.85,$668.01,23.74%
+Seattle,Metal Fabrication | PMAX,39.77,901,29,3.22%,1.37,0,0%,0,$668.01,23.74%
+Seattle,** LOCATION TOTAL **,668.01,3025,217,7.17%,3.08,3,1.38%,222.67,$668.01,23.74%
+GRAND TOTAL,,2813.85,15092,982,6.51%,2.87,19,1.93%,148.10,"$2,813.85",100.00%
