@@ -172,6 +172,21 @@ serve(async (req) => {
     const uniqueRecords = Array.from(recordsMap.values());
     console.log(`Unique records: ${uniqueRecords.length}, duplicates merged: ${duplicatesSkipped}`);
 
+    // Delete all existing contacts before importing (replace mode)
+    const { error: deleteError } = await supabase
+      .from("hubspot_contacts")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
+
+    if (deleteError) {
+      console.error("Failed to clear existing contacts:", deleteError);
+      return new Response(
+        JSON.stringify({ error: `Failed to clear existing data: ${deleteError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    console.log("Cleared existing contacts");
+
     // Process in larger batches for efficiency
     const BATCH_SIZE = 500;
     const summary = {
