@@ -26,6 +26,16 @@ const HEADER_MAPPING: Record<string, string> = {
   "Create Date": "hubspot_create_date",
 };
 
+// Essential columns to keep in raw_data (reduces memory usage)
+const ESSENTIAL_RAW_COLUMNS = [
+  "Record ID", "First Name", "Last Name", "Email", "Phone Number",
+  "Company Name", "City", "State/Region", "Country/Region",
+  "Original Traffic Source", "Latest Traffic Source",
+  "Original Traffic Source Drill-Down 1", "Original Traffic Source Drill-Down 2",
+  "Lifecycle Stage", "Lead Status", "Message", "Create Date",
+  "Contact owner", "Record source detail 1", "Incoming Lead Source",
+];
+
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
   let current = "";
@@ -86,18 +96,25 @@ serve(async (req) => {
     }
 
     const csvText = await file.text();
-    const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== "");
+    const lines = csvText.split(/\r?\n/);
+    const totalLines = lines.length;
     
-    if (lines.length < 2) {
+    // Find first non-empty line for headers
+    let headerLineIndex = 0;
+    while (headerLineIndex < lines.length && !lines[headerLineIndex].trim()) {
+      headerLineIndex++;
+    }
+    
+    if (headerLineIndex >= lines.length) {
       return new Response(
-        JSON.stringify({ error: "CSV file is empty or has no data rows" }),
+        JSON.stringify({ error: "CSV file is empty" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Parse headers
-    const headers = parseCSVLine(lines[0]);
-    console.log(`Found ${headers.length} columns, ${lines.length - 1} data rows`);
+    const headers = parseCSVLine(lines[headerLineIndex]);
+    console.log(`Found ${headers.length} columns`);
 
     // Create header index map
     const headerIndexMap: Record<string, number> = {};
@@ -114,29 +131,60 @@ serve(async (req) => {
       );
     }
 
-    // Parse all rows and deduplicate by record_id (keep last occurrence)
-    const recordsMap = new Map<string, Record<string, unknown>>();
-    let duplicatesSkipped = 0;
+    // Delete all existing contacts before importing (replace mode)
+    console.log("Clearing existing contacts...");
+    const { error: deleteError } = await supabase
+      .from("hubspot_contacts")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
 
-    for (let i = 1; i < lines.length; i++) {
+    if (deleteError) {
+      console.error("Failed to clear existing contacts:", deleteError);
+      return new Response(
+        JSON.stringify({ error: `Failed to clear existing data: ${deleteError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    console.log("Cleared existing contacts");
+
+    // Process in streaming batches to reduce memory
+    const BATCH_SIZE = 100;
+    const seenRecordIds = new Set<string>();
+    let batch: Record<string, unknown>[] = [];
+    let processed = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    for (let i = headerLineIndex + 1; i < lines.length; i++) {
       const line = lines[i];
       if (!line.trim()) continue;
       
       const values = parseCSVLine(line);
       const recordId = values[recordIdIndex];
       
-      if (!recordId) continue;
+      if (!recordId) {
+        skipped++;
+        continue;
+      }
 
-      // Build raw_data object with all columns
+      // Skip duplicates within file (keep first occurrence for streaming)
+      if (seenRecordIds.has(recordId)) {
+        skipped++;
+        continue;
+      }
+      seenRecordIds.add(recordId);
+
+      // Build raw_data with only essential columns (reduces memory)
       const rawData: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        rawData[header] = values[index] || "";
-      });
+      for (const col of ESSENTIAL_RAW_COLUMNS) {
+        const idx = headerIndexMap[col];
+        if (idx !== undefined) {
+          rawData[col] = values[idx] || "";
+        }
+      }
 
       // Build record with mapped columns
-      const record: Record<string, unknown> = {
-        raw_data: rawData,
-      };
+      const record: Record<string, unknown> = { raw_data: rawData };
 
       // Map known columns
       for (const [csvHeader, dbColumn] of Object.entries(HEADER_MAPPING)) {
@@ -160,78 +208,53 @@ serve(async (req) => {
         }
       }
 
-      // Track duplicates
-      if (recordsMap.has(recordId)) {
-        duplicatesSkipped++;
+      batch.push(record);
+
+      // Insert batch when full
+      if (batch.length >= BATCH_SIZE) {
+        const { error } = await supabase
+          .from("hubspot_contacts")
+          .insert(batch);
+
+        if (error) {
+          console.error(`Batch error at row ${i}:`, error.message);
+          errors += batch.length;
+        } else {
+          processed += batch.length;
+        }
+
+        if (processed % 1000 === 0) {
+          console.log(`Progress: ${processed} processed, ${errors} errors`);
+        }
+
+        batch = []; // Clear batch to free memory
       }
-      
-      // Store (overwrites any previous occurrence - keeps last)
-      recordsMap.set(recordId, record);
     }
 
-    const uniqueRecords = Array.from(recordsMap.values());
-    console.log(`Unique records: ${uniqueRecords.length}, duplicates merged: ${duplicatesSkipped}`);
-
-    // Delete all existing contacts before importing (replace mode)
-    const { error: deleteError } = await supabase
-      .from("hubspot_contacts")
-      .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
-
-    if (deleteError) {
-      console.error("Failed to clear existing contacts:", deleteError);
-      return new Response(
-        JSON.stringify({ error: `Failed to clear existing data: ${deleteError.message}` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    console.log("Cleared existing contacts");
-
-    // Process in larger batches for efficiency
-    const BATCH_SIZE = 500;
-    const summary = {
-      total_rows: lines.length - 1,
-      unique_records: uniqueRecords.length,
-      duplicates_merged: duplicatesSkipped,
-      processed: 0,
-      errors: 0,
-      error_details: [] as string[],
-    };
-
-    for (let i = 0; i < uniqueRecords.length; i += BATCH_SIZE) {
-      const batch = uniqueRecords.slice(i, i + BATCH_SIZE);
-      
-      const { data, error } = await supabase
+    // Insert remaining records
+    if (batch.length > 0) {
+      const { error } = await supabase
         .from("hubspot_contacts")
-        .upsert(batch, { 
-          onConflict: "record_id",
-          ignoreDuplicates: false 
-        })
-        .select("record_id");
+        .insert(batch);
 
       if (error) {
-        console.error(`Batch ${i}-${i + batch.length} error:`, error);
-        summary.errors += batch.length;
-        summary.error_details.push(`Batch error: ${error.message}`);
+        console.error("Final batch error:", error.message);
+        errors += batch.length;
       } else {
-        summary.processed += data?.length || batch.length;
+        processed += batch.length;
       }
-
-      console.log(`Processed ${Math.min(i + BATCH_SIZE, uniqueRecords.length)}/${uniqueRecords.length}`);
     }
 
-    console.log("Import complete:", summary);
+    console.log(`Import complete: ${processed} processed, ${skipped} skipped, ${errors} errors`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         summary: {
-          total_rows: summary.total_rows,
-          unique_records: summary.unique_records,
-          duplicates_merged: summary.duplicates_merged,
-          processed: summary.processed,
-          errors: summary.errors,
-          error_details: summary.error_details.slice(0, 5),
+          total_rows: totalLines - headerLineIndex - 1,
+          processed,
+          skipped,
+          errors,
         }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
