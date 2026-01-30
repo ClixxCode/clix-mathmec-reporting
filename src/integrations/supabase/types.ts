@@ -47,6 +47,81 @@ export type Database = {
         }
         Relationships: []
       }
+      hubspot_contacts: {
+        Row: {
+          city: string | null
+          company_name: string | null
+          country: string | null
+          created_at: string
+          email: string | null
+          first_name: string | null
+          hubspot_create_date: string | null
+          id: string
+          last_name: string | null
+          lead_status: string | null
+          lifecycle_stage: string | null
+          message: string | null
+          original_traffic_source: string | null
+          phone_number: string | null
+          quality_analysis: Json | null
+          quality_score: number | null
+          raw_data: Json
+          record_id: string
+          state_region: string | null
+          traffic_source_drill_down_1: string | null
+          traffic_source_drill_down_2: string | null
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          company_name?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          hubspot_create_date?: string | null
+          id?: string
+          last_name?: string | null
+          lead_status?: string | null
+          lifecycle_stage?: string | null
+          message?: string | null
+          original_traffic_source?: string | null
+          phone_number?: string | null
+          quality_analysis?: Json | null
+          quality_score?: number | null
+          raw_data: Json
+          record_id: string
+          state_region?: string | null
+          traffic_source_drill_down_1?: string | null
+          traffic_source_drill_down_2?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          company_name?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          hubspot_create_date?: string | null
+          id?: string
+          last_name?: string | null
+          lead_status?: string | null
+          lifecycle_stage?: string | null
+          message?: string | null
+          original_traffic_source?: string | null
+          phone_number?: string | null
+          quality_analysis?: Json | null
+          quality_score?: number | null
+          raw_data?: Json
+          record_id?: string
+          state_region?: string | null
+          traffic_source_drill_down_1?: string | null
+          traffic_source_drill_down_2?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
