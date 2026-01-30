@@ -6,6 +6,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Case-insensitive check for paid search
+function isPaidSearch(source: string | null): boolean {
+  if (!source) return false;
+  return source.toLowerCase() === "paid search";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -27,7 +33,7 @@ serve(async (req) => {
 
     // Apply filters
     if (source) {
-      query = query.eq("original_traffic_source", source);
+      query = query.ilike("original_traffic_source", source);
     }
     if (startDate) {
       query = query.gte("hubspot_create_date", startDate);
@@ -51,11 +57,11 @@ serve(async (req) => {
       .from("hubspot_contacts")
       .select("*", { count: "exact", head: true });
 
-    // Get paid search count
+    // Get paid search count (case-insensitive)
     const { count: paidSearchCount } = await supabase
       .from("hubspot_contacts")
       .select("*", { count: "exact", head: true })
-      .eq("original_traffic_source", "Paid search");
+      .ilike("original_traffic_source", "Paid Search");
 
     // Build response based on groupBy parameter
     const response: Record<string, unknown> = {
@@ -79,7 +85,7 @@ serve(async (req) => {
         }
         byMonth[monthKey].count++;
         
-        if (contact.original_traffic_source === "Paid search") {
+        if (isPaidSearch(contact.original_traffic_source)) {
           byMonth[monthKey].paid_search++;
         }
       }
@@ -121,7 +127,7 @@ serve(async (req) => {
           }
           byMonth[monthKey].count++;
           
-          if (contact.original_traffic_source === "Paid search") {
+          if (isPaidSearch(contact.original_traffic_source)) {
             byMonth[monthKey].paid_search++;
           }
         }
