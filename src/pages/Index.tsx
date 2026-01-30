@@ -1,20 +1,24 @@
 import { useRef, useState } from "react";
+import { format } from "date-fns";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { QualityTrendsTable } from "@/components/dashboard/QualityTrendsTable";
 import { LocationPerformance } from "@/components/dashboard/LocationPerformance";
 import { DealsTable } from "@/components/dashboard/DealsTable";
 import { ExecutiveSummaryDesktop, ExecutiveSummaryMobile } from "@/components/dashboard/ExecutiveSummary";
 import { Glossary } from "@/components/dashboard/Glossary";
+import { MonthSelector } from "@/components/dashboard/MonthSelector";
+import { DashboardFiltersProvider, useDashboardFilters } from "@/hooks/use-dashboard-filters";
+import { useMonthlyMetrics } from "@/hooks/use-contact-analytics";
 import { DollarSign, Phone, Users, TrendingUp, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import mathmecLogo from "@/assets/mathmec-logo.png";
-import { getDecemberMetrics } from "@/data/leads";
 import html2pdf from "html2pdf.js";
 
-const Index = () => {
-  const decemberMetrics = getDecemberMetrics();
+function DashboardContent() {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const { filters } = useDashboardFilters();
+  const { data: metrics, isLoading: metricsLoading } = useMonthlyMetrics();
 
   const handleDownloadPDF = async () => {
     if (!contentRef.current) return;
@@ -22,9 +26,10 @@ const Index = () => {
     setIsGenerating(true);
     
     try {
+      const monthLabel = format(filters.selectedMonth, "MMMM-yyyy");
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5],
-        filename: 'Mathews-Mechanical-December-2025-Report.pdf',
+        filename: `Mathews-Mechanical-${monthLabel}-Report.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
           scale: 2,
@@ -43,6 +48,8 @@ const Index = () => {
     }
   };
 
+  const monthLabel = format(filters.selectedMonth, "MMMM yyyy");
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -55,10 +62,11 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Performance Report</h1>
-                <p className="text-gray-500 text-sm">December 2025</p>
+                <p className="text-gray-500 text-sm">{monthLabel}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 text-sm">
+              <MonthSelector />
               <span className="px-4 py-2 bg-blue-600 text-white rounded-xl font-medium shadow-sm shadow-blue-600/20">
                 One-Pager Dashboard
               </span>
@@ -96,27 +104,27 @@ const Index = () => {
             <MetricCard
               title="Total Spend"
               value="$2,814"
-              subtitle="December Paid Search budget"
+              subtitle="Paid Search budget"
               icon={DollarSign}
               variant="blue"
             />
             <MetricCard
               title="Conversions"
-              value={decemberMetrics.conversions}
+              value={metricsLoading ? "..." : metrics?.conversions || 0}
               subtitle="Paid Search campaigns"
               icon={Users}
               variant="green"
             />
             <MetricCard
               title="Contacts"
-              value={decemberMetrics.totalContacts}
+              value={metricsLoading ? "..." : metrics?.totalContacts || 0}
               subtitle="Calls & Form Submissions"
               icon={Phone}
               variant="purple"
             />
             <MetricCard
               title="Quality Rate"
-              value={`${decemberMetrics.qualityRate}`}
+              value={metricsLoading ? "..." : (metrics?.avgQuality !== null ? metrics?.avgQuality : "—")}
               subtitle="Contact Quality"
               icon={TrendingUp}
               variant="orange"
@@ -152,10 +160,18 @@ const Index = () => {
 
         {/* Footer */}
         <footer className="text-center text-sm text-gray-400 py-6 border-t border-gray-200">
-          <p>Report generated for Mathews Mechanical • December 2025</p>
+          <p>Report generated for Mathews Mechanical • {monthLabel}</p>
         </footer>
       </main>
     </div>
+  );
+}
+
+const Index = () => {
+  return (
+    <DashboardFiltersProvider>
+      <DashboardContent />
+    </DashboardFiltersProvider>
   );
 };
 
