@@ -9,6 +9,7 @@ import { ArrowLeft, Database, RefreshCw, CheckCircle2, XCircle, ExternalLink } f
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import mathmecLogo from "@/assets/mathmec-logo.png";
+import { HubSpotContactsCard } from "@/components/admin/HubSpotContactsCard";
 
 interface DataSource {
   id: string;
@@ -202,16 +203,20 @@ export default function Admin() {
           )}
         </section>
 
-        {/* Coming Soon Section */}
+        {/* HubSpot Contacts Section */}
         <section>
-          <Card className="border-dashed border-2">
-            <CardHeader>
-              <CardTitle className="text-base text-gray-600">Coming Soon</CardTitle>
-              <CardDescription>
-                More integrations are on the way, including CSV uploads and HubSpot CRM sync.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-orange-100">
+              <Database className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Contact Management</h2>
+              <p className="text-sm text-gray-500">Import and analyze HubSpot contact data</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <HubSpotContactsCard />
+          </div>
         </section>
       </main>
     </div>

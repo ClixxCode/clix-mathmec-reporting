@@ -1,1 +1,7 @@
 project_id = "hfzysrftppvxkxfgcumw"
+
+[functions.import-hubspot-contacts]
+verify_jwt = false
+
+[functions.contact-analytics]
+verify_jwt = false
