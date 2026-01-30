@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      data_sources: {
+        Row: {
+          config: Json | null
+          created_at: string
+          id: string
+          is_connected: boolean
+          last_sync_at: string | null
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_connected?: boolean
+          last_sync_at?: string | null
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_connected?: boolean
+          last_sync_at?: string | null
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
