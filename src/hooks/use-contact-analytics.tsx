@@ -39,21 +39,17 @@ export function useMonthlyMetrics() {
   return useQuery({
     queryKey: ["monthly-metrics", filters.startDate, filters.endDate],
     queryFn: async () => {
-      // Query contacts for the selected month
+      // Query only Paid Search contacts for the selected month
       const { data: contacts, error, count } = await supabase
         .from("hubspot_contacts")
         .select("*", { count: "exact" })
+        .ilike("original_traffic_source", "Paid Search")
         .gte("hubspot_create_date", filters.startDate)
         .lte("hubspot_create_date", filters.endDate + "T23:59:59");
 
       if (error) throw error;
 
-      const totalContacts = count || 0;
-      
-      // Calculate paid search contacts
-      const paidSearchContacts = contacts?.filter(
-        (c) => c.original_traffic_source?.toLowerCase() === "paid search"
-      ).length || 0;
+      const paidSearchContacts = count || 0;
 
       // Calculate average quality (if quality_score exists)
       const qualityScores = contacts
@@ -65,11 +61,10 @@ export function useMonthlyMetrics() {
         : null;
 
       return {
-        totalContacts,
+        totalContacts: paidSearchContacts, // Now shows Paid Search only
         paidSearchContacts,
         avgQuality,
-        // Conversions - this would need to come from another source
-        conversions: paidSearchContacts, // Using paid search as proxy for now
+        conversions: paidSearchContacts,
       };
     },
   });
@@ -84,12 +79,13 @@ export interface QualityTrendRow {
 
 export function useQualityTrends() {
   return useQuery({
-    queryKey: ["quality-trends"],
+    queryKey: ["quality-trends-paid-search"],
     queryFn: async (): Promise<QualityTrendRow[]> => {
-      // Get all contacts grouped by month
+      // Get only Paid Search contacts grouped by month
       const { data: contacts, error } = await supabase
         .from("hubspot_contacts")
         .select("hubspot_create_date, quality_score, original_traffic_source")
+        .ilike("original_traffic_source", "Paid Search")
         .not("hubspot_create_date", "is", null)
         .order("hubspot_create_date", { ascending: false });
 
