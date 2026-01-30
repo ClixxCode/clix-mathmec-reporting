@@ -152,7 +152,8 @@ serve(async (req) => {
     const seenRecordIds = new Set<string>();
     let batch: Record<string, unknown>[] = [];
     let processed = 0;
-    let skipped = 0;
+    let skippedDuplicates = 0;
+    let skippedEmpty = 0;
     let errors = 0;
 
     for (let i = headerLineIndex + 1; i < lines.length; i++) {
@@ -162,14 +163,14 @@ serve(async (req) => {
       const values = parseCSVLine(line);
       const recordId = values[recordIdIndex];
       
-      if (!recordId) {
-        skipped++;
+      if (!recordId || recordId.trim() === "") {
+        skippedEmpty++;
         continue;
       }
 
       // Skip duplicates within file (keep first occurrence for streaming)
       if (seenRecordIds.has(recordId)) {
-        skipped++;
+        skippedDuplicates++;
         continue;
       }
       seenRecordIds.add(recordId);
@@ -245,15 +246,17 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Import complete: ${processed} processed, ${skipped} skipped, ${errors} errors`);
+    const validRows = processed + skippedDuplicates;
+    console.log(`Import complete: ${processed} processed, ${skippedDuplicates} duplicates, ${skippedEmpty} empty rows, ${errors} errors`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         summary: {
-          total_rows: totalLines - headerLineIndex - 1,
+          total_rows: validRows,
           processed,
-          skipped,
+          duplicates: skippedDuplicates,
+          empty_rows: skippedEmpty,
           errors,
         }
       }),
