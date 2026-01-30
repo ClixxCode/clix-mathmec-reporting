@@ -1,15 +1,47 @@
+import { useRef, useState } from "react";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { QualityTrendsTable } from "@/components/dashboard/QualityTrendsTable";
 import { LocationPerformance } from "@/components/dashboard/LocationPerformance";
 import { DealsTable } from "@/components/dashboard/DealsTable";
 import { ExecutiveSummaryDesktop, ExecutiveSummaryMobile } from "@/components/dashboard/ExecutiveSummary";
 import { Glossary } from "@/components/dashboard/Glossary";
-import { DollarSign, Phone, Users, TrendingUp } from "lucide-react";
+import { DollarSign, Phone, Users, TrendingUp, Download, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import mathmecLogo from "@/assets/mathmec-logo.png";
 import { getDecemberMetrics } from "@/data/leads";
+import html2pdf from "html2pdf.js";
 
 const Index = () => {
   const decemberMetrics = getDecemberMetrics();
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current) return;
+    
+    setIsGenerating(true);
+    
+    try {
+      const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: 'Mathews-Mechanical-December-2025-Report.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+        },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      await html2pdf().set(opt).from(contentRef.current).save();
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -26,10 +58,24 @@ const Index = () => {
                 <p className="text-gray-500 text-sm">December 2025</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-3 text-sm">
               <span className="px-4 py-2 bg-blue-600 text-white rounded-xl font-medium shadow-sm shadow-blue-600/20">
                 One-Pager Dashboard
               </span>
+              <Button
+                onClick={handleDownloadPDF}
+                disabled={isGenerating}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                {isGenerating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {isGenerating ? "Generating..." : "Download PDF"}
+              </Button>
             </div>
           </div>
         </div>
@@ -38,7 +84,7 @@ const Index = () => {
       {/* Mobile floating button */}
       <ExecutiveSummaryMobile />
 
-      <main className="container py-8 space-y-8">
+      <main ref={contentRef} className="container py-8 space-y-8">
         {/* Executive Summary - Sticky on desktop */}
         <section className="hidden lg:block">
           <ExecutiveSummaryDesktop />
