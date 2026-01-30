@@ -57,7 +57,6 @@ function parseDate(dateStr: string): string | null {
   if (!dateStr || dateStr.trim() === "") return null;
   
   try {
-    // Handle various date formats from HubSpot
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return null;
     return date.toISOString();
@@ -98,7 +97,7 @@ serve(async (req) => {
 
     // Parse headers
     const headers = parseCSVLine(lines[0]);
-    console.log(`Found ${headers.length} columns in CSV`);
+    console.log(`Found ${headers.length} columns, ${lines.length - 1} data rows`);
 
     // Create header index map
     const headerIndexMap: Record<string, number> = {};
@@ -106,86 +105,96 @@ serve(async (req) => {
       headerIndexMap[header] = index;
     });
 
-    // Process data rows
+    // Find Record ID column index
+    const recordIdIndex = headerIndexMap["Record ID"];
+    if (recordIdIndex === undefined) {
+      return new Response(
+        JSON.stringify({ error: "CSV must contain 'Record ID' column" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse all rows and deduplicate by record_id (keep last occurrence)
+    const recordsMap = new Map<string, Record<string, unknown>>();
+    let duplicatesSkipped = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      
+      const values = parseCSVLine(line);
+      const recordId = values[recordIdIndex];
+      
+      if (!recordId) continue;
+
+      // Build raw_data object with all columns
+      const rawData: Record<string, string> = {};
+      headers.forEach((header, index) => {
+        rawData[header] = values[index] || "";
+      });
+
+      // Build record with mapped columns
+      const record: Record<string, unknown> = {
+        raw_data: rawData,
+      };
+
+      // Map known columns
+      for (const [csvHeader, dbColumn] of Object.entries(HEADER_MAPPING)) {
+        const index = headerIndexMap[csvHeader];
+        if (index !== undefined) {
+          let value: unknown = values[index] || null;
+          
+          if (dbColumn === "hubspot_create_date" && value) {
+            value = parseDate(value as string);
+          }
+          
+          record[dbColumn] = value;
+        }
+      }
+
+      // Track duplicates
+      if (recordsMap.has(recordId)) {
+        duplicatesSkipped++;
+      }
+      
+      // Store (overwrites any previous occurrence - keeps last)
+      recordsMap.set(recordId, record);
+    }
+
+    const uniqueRecords = Array.from(recordsMap.values());
+    console.log(`Unique records: ${uniqueRecords.length}, duplicates merged: ${duplicatesSkipped}`);
+
+    // Process in larger batches for efficiency
+    const BATCH_SIZE = 500;
     const summary = {
-      total_rows: 0,
-      inserted: 0,
-      updated: 0,
+      total_rows: lines.length - 1,
+      unique_records: uniqueRecords.length,
+      duplicates_merged: duplicatesSkipped,
+      processed: 0,
       errors: 0,
       error_details: [] as string[],
     };
 
-    const BATCH_SIZE = 100;
-    const dataRows = lines.slice(1);
-    
-    for (let batchStart = 0; batchStart < dataRows.length; batchStart += BATCH_SIZE) {
-      const batchEnd = Math.min(batchStart + BATCH_SIZE, dataRows.length);
-      const batchRows = dataRows.slice(batchStart, batchEnd);
-      const records: Record<string, unknown>[] = [];
+    for (let i = 0; i < uniqueRecords.length; i += BATCH_SIZE) {
+      const batch = uniqueRecords.slice(i, i + BATCH_SIZE);
+      
+      const { data, error } = await supabase
+        .from("hubspot_contacts")
+        .upsert(batch, { 
+          onConflict: "record_id",
+          ignoreDuplicates: false 
+        })
+        .select("record_id");
 
-      for (const line of batchRows) {
-        if (!line.trim()) continue;
-        
-        summary.total_rows++;
-        const values = parseCSVLine(line);
-        
-        // Build raw_data object with all columns
-        const rawData: Record<string, string> = {};
-        headers.forEach((header, index) => {
-          rawData[header] = values[index] || "";
-        });
-
-        // Build record with mapped columns
-        const record: Record<string, unknown> = {
-          raw_data: rawData,
-        };
-
-        // Map known columns
-        for (const [csvHeader, dbColumn] of Object.entries(HEADER_MAPPING)) {
-          const index = headerIndexMap[csvHeader];
-          if (index !== undefined) {
-            let value: unknown = values[index] || null;
-            
-            // Handle date conversion
-            if (dbColumn === "hubspot_create_date" && value) {
-              value = parseDate(value as string);
-            }
-            
-            record[dbColumn] = value;
-          }
-        }
-
-        // Skip if no record_id
-        if (!record.record_id) {
-          summary.errors++;
-          summary.error_details.push(`Row ${summary.total_rows}: Missing Record ID`);
-          continue;
-        }
-
-        records.push(record);
+      if (error) {
+        console.error(`Batch ${i}-${i + batch.length} error:`, error);
+        summary.errors += batch.length;
+        summary.error_details.push(`Batch error: ${error.message}`);
+      } else {
+        summary.processed += data?.length || batch.length;
       }
 
-      // Upsert batch
-      if (records.length > 0) {
-        const { data, error } = await supabase
-          .from("hubspot_contacts")
-          .upsert(records, { 
-            onConflict: "record_id",
-            ignoreDuplicates: false 
-          })
-          .select("record_id");
-
-        if (error) {
-          console.error("Batch upsert error:", error);
-          summary.errors += records.length;
-          summary.error_details.push(`Batch error: ${error.message}`);
-        } else {
-          // All records in this batch were either inserted or updated
-          summary.inserted += data?.length || 0;
-        }
-      }
-
-      console.log(`Processed batch ${batchStart}-${batchEnd} of ${dataRows.length}`);
+      console.log(`Processed ${Math.min(i + BATCH_SIZE, uniqueRecords.length)}/${uniqueRecords.length}`);
     }
 
     console.log("Import complete:", summary);
@@ -195,9 +204,11 @@ serve(async (req) => {
         success: true, 
         summary: {
           total_rows: summary.total_rows,
-          processed: summary.inserted,
+          unique_records: summary.unique_records,
+          duplicates_merged: summary.duplicates_merged,
+          processed: summary.processed,
           errors: summary.errors,
-          error_details: summary.error_details.slice(0, 10), // Limit error details
+          error_details: summary.error_details.slice(0, 5),
         }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
