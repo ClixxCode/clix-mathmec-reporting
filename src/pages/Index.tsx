@@ -116,7 +116,7 @@ function DashboardContent() {
               variant="green"
             />
             <MetricCard
-              title="Contacts"
+              title="Paid Search Contacts"
               value={metricsLoading ? "..." : metrics?.totalContacts || 0}
               subtitle="Calls & Form Submissions"
               icon={Phone}

@@ -78,8 +78,8 @@ export function QualityTrendsTable() {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">Contact Quality Trends</h3>
-          <p className="text-sm text-gray-500 mt-1">Monthly breakdown of contact quality scores</p>
+          <h3 className="text-lg font-semibold text-gray-900">Paid Search Contact Trends</h3>
+          <p className="text-sm text-gray-500 mt-1">Monthly breakdown of paid search contacts</p>
         </div>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -92,7 +92,7 @@ export function QualityTrendsTable() {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">Contact Quality Trends</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Paid Search Contact Trends</h3>
         </div>
         <div className="flex items-center justify-center py-12 text-red-500">
           Failed to load data
@@ -104,8 +104,8 @@ export function QualityTrendsTable() {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="px-6 py-5 border-b border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900">Contact Quality Trends</h3>
-        <p className="text-sm text-gray-500 mt-1">Monthly breakdown of contact quality scores</p>
+        <h3 className="text-lg font-semibold text-gray-900">Paid Search Contact Trends</h3>
+        <p className="text-sm text-gray-500 mt-1">Monthly breakdown of paid search contacts</p>
       </div>
       <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
         <table className="w-full">
