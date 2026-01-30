@@ -36,31 +36,64 @@ const ESSENTIAL_RAW_COLUMNS = [
   "Contact owner", "Record source detail 1", "Incoming Lead Source",
 ];
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
+// Robust CSV row parser that supports newlines inside quoted fields.
+function* parseCSVRows(text: string): Generator<string[]> {
+  let row: string[] = [];
+  let field = "";
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    
+  const pushField = () => {
+    row.push(field.trim());
+    field = "";
+  };
+
+  const emitRow = (): string[] | null => {
+    // Avoid yielding a trailing empty row
+    if (row.length === 1 && row[0] === "") {
+      row = [];
+      return null;
+    }
+    const out = row;
+    row = [];
+    return out;
+  };
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
     if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
+      if (inQuotes && text[i + 1] === '"') {
+        field += '"';
         i++;
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (char === "," && !inQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
+      continue;
     }
+
+    if (!inQuotes && char === ",") {
+      pushField();
+      continue;
+    }
+
+    if (!inQuotes && (char === "\n" || char === "\r")) {
+      pushField();
+      // Handle CRLF
+      if (char === "\r" && text[i + 1] === "\n") i++;
+      const out = emitRow();
+      if (out) yield out;
+      continue;
+    }
+
+    field += char;
   }
-  result.push(current.trim());
-  
-  return result;
+
+  // Flush last row
+  if (field.length > 0 || row.length > 0) {
+    pushField();
+    const out = emitRow();
+    if (out) yield out;
+  }
 }
 
 function parseDate(dateStr: string): string | null {
@@ -96,24 +129,24 @@ serve(async (req) => {
     }
 
     const csvText = await file.text();
-    const lines = csvText.split(/\r?\n/);
-    const totalLines = lines.length;
-    
-    // Find first non-empty line for headers
-    let headerLineIndex = 0;
-    while (headerLineIndex < lines.length && !lines[headerLineIndex].trim()) {
-      headerLineIndex++;
+
+    const rows = parseCSVRows(csvText);
+    let headers: string[] | null = null;
+    // Find the first non-empty row as header
+    for (const row of rows) {
+      if (row.some((c) => (c || "").trim() !== "")) {
+        headers = row;
+        break;
+      }
     }
-    
-    if (headerLineIndex >= lines.length) {
+
+    if (!headers) {
       return new Response(
         JSON.stringify({ error: "CSV file is empty" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Parse headers
-    const headers = parseCSVLine(lines[headerLineIndex]);
     console.log(`Found ${headers.length} columns`);
 
     // Create header index map
@@ -156,14 +189,13 @@ serve(async (req) => {
     let skippedEmpty = 0;
     let errors = 0;
 
-    for (let i = headerLineIndex + 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line.trim()) continue;
-      
-      const values = parseCSVLine(line);
-      const recordId = values[recordIdIndex];
-      
-      if (!recordId || recordId.trim() === "") {
+    // Remaining rows (after header) are already positioned in the generator.
+    for (const values of rows) {
+      const recordId = String(values[recordIdIndex] || "").trim();
+
+      // Guardrail: HubSpot record IDs are numeric; this also prevents processing
+      // "continuation" lines from multiline fields as fake rows.
+      if (!recordId || !/^\d+$/.test(recordId)) {
         skippedEmpty++;
         continue;
       }
@@ -218,7 +250,7 @@ serve(async (req) => {
           .insert(batch);
 
         if (error) {
-          console.error(`Batch error at row ${i}:`, error.message);
+          console.error(`Batch error:`, error.message);
           errors += batch.length;
         } else {
           processed += batch.length;
