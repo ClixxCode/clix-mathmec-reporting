@@ -152,6 +152,14 @@ serve(async (req) => {
         }
       }
 
+      // Fallback: Use "Latest Traffic Source" if "Original Traffic Source" is empty
+      if (!record.original_traffic_source || record.original_traffic_source === "") {
+        const latestTsIndex = headerIndexMap["Latest Traffic Source"];
+        if (latestTsIndex !== undefined && values[latestTsIndex]) {
+          record.original_traffic_source = values[latestTsIndex];
+        }
+      }
+
       // Track duplicates
       if (recordsMap.has(recordId)) {
         duplicatesSkipped++;
