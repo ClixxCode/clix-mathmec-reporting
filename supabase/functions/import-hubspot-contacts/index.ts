@@ -130,15 +130,19 @@ serve(async (req) => {
 
     const csvText = await file.text();
 
-    const rows = parseCSVRows(csvText);
-    let headers: string[] | null = null;
+    // Collect all rows from the generator (generators can only be iterated once)
+    const allRows: string[][] = [...parseCSVRows(csvText)];
+    
     // Find the first non-empty row as header
-    for (const row of rows) {
-      if (row.some((c) => (c || "").trim() !== "")) {
-        headers = row;
+    let headerRowIndex = -1;
+    for (let i = 0; i < allRows.length; i++) {
+      if (allRows[i].some((c) => (c || "").trim() !== "")) {
+        headerRowIndex = i;
         break;
       }
     }
+
+    const headers = headerRowIndex >= 0 ? allRows[headerRowIndex] : null;
 
     if (!headers) {
       return new Response(
@@ -189,8 +193,9 @@ serve(async (req) => {
     let skippedEmpty = 0;
     let errors = 0;
 
-    // Remaining rows (after header) are already positioned in the generator.
-    for (const values of rows) {
+    // Process data rows (skip header row)
+    for (let rowIdx = headerRowIndex + 1; rowIdx < allRows.length; rowIdx++) {
+      const values = allRows[rowIdx];
       const recordId = String(values[recordIdIndex] || "").trim();
 
       // Guardrail: HubSpot record IDs are numeric; this also prevents processing
