@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQualityTrends, QualityTrendRow } from "@/hooks/use-contact-analytics";
 import { TrendingUp, TrendingDown, ArrowUp, ArrowDown, ArrowUpDown, Loader2 } from "lucide-react";
+import { ContactsDialog } from "./ContactsDialog";
 
 type SortKey = "month" | "totalContacts" | "avgQuality";
 type SortDirection = "asc" | "desc";
@@ -9,6 +10,7 @@ export function QualityTrendsTable() {
   const { data: qualityTrends, isLoading, error } = useQualityTrends();
   const [sortKey, setSortKey] = useState<SortKey>("month");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   const parseMonthYear = (monthStr: string): Date => {
     const [month, year] = monthStr.split(" ");
@@ -130,7 +132,11 @@ export function QualityTrendsTable() {
               const isUp = getTrend(row, index);
 
               return (
-                <tr key={row.month} className="hover:bg-gray-50/50 transition-colors">
+                <tr 
+                  key={row.month} 
+                  className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedMonth(row.month)}
+                >
                   <td className="px-4 py-4 font-medium text-gray-900">{row.month}</td>
                   <td className="px-4 py-4 text-right">
                     <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
@@ -159,6 +165,12 @@ export function QualityTrendsTable() {
           </tbody>
         </table>
       </div>
+
+      <ContactsDialog 
+        open={selectedMonth !== null} 
+        onOpenChange={(open) => !open && setSelectedMonth(null)}
+        month={selectedMonth || ""}
+      />
     </div>
   );
 }
