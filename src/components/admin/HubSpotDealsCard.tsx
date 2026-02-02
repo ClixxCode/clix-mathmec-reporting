@@ -44,14 +44,14 @@ export function HubSpotDealsCard() {
         .not("associated_contact_id", "is", null)
         .neq("associated_contact_id", "");
 
-      // Get won deals and revenue
+      // Get won deals and revenue (use 'amount' field - that's where deal values are stored)
       const { data: wonDealsData } = await supabase
         .from("hubspot_deals")
-        .select("closed_amount")
+        .select("amount")
         .ilike("deal_stage", "%won%");
 
       const wonDeals = wonDealsData?.length || 0;
-      const totalRevenue = wonDealsData?.reduce((sum, d) => sum + (Number(d.closed_amount) || 0), 0) || 0;
+      const totalRevenue = wonDealsData?.reduce((sum, d) => sum + (Number(d.amount) || 0), 0) || 0;
 
       return {
         total_deals: totalDeals || 0,
