@@ -367,18 +367,27 @@ Your writing style:
 - Keep paragraphs short and scannable
 - Use specific numbers—don't say "increased significantly," say "increased 23%"
 
+CRITICAL FORMATTING RULES:
+- Use proper markdown headers: ## for main sections, ### for subsections
+- For bullet lists, put each item on its own line starting with "- " (dash space)
+- For numbered lists, put each item on its own line starting with "1. ", "2. ", etc.
+- Add a blank line before and after lists
+- Never combine list items on the same line
+- Wrap important metrics in **bold**
+
 Structure your narrative as:
 1. **Executive Summary** (2-3 sentences: headline metrics and what they mean)
 2. **Lead Generation** (contacts, quality scores, sources)
 3. **Revenue Impact** (deals won, pipeline, ROI on ad spend)
 4. **Campaign Management** (what was changed and why it mattered)
-5. **Looking Ahead** (brief, what to watch)
+5. **Looking Ahead** (brief action items as a numbered list)
 
 DO NOT:
 - Use technical marketing jargon without explaining it
 - List every detail—focus on the story the data tells
 - Make promises or guarantees
-- Use phrases like "crushing it" or "amazing results"`;
+- Use phrases like "crushing it" or "amazing results"
+- Put multiple list items on a single line`;
 
     const userPrompt = `Write an executive summary for Matthews Mechanical for ${monthName}.
 
