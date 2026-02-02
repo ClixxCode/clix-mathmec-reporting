@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Briefcase, User, Clock } from "lucide-react";
+import { Loader2, Briefcase, User } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DealsDialogProps {
@@ -139,7 +139,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
         ) : (
           <ScrollArea className="h-[60vh]">
             {/* Header row */}
-            <div className="grid grid-cols-[1fr_140px_100px_140px_80px] gap-3 px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide border-b border-gray-100 sticky top-0 bg-white">
+            <div className="grid grid-cols-[1fr_130px_90px_130px_70px] gap-3 px-4 py-3 text-xs font-semibold text-emerald-700 uppercase tracking-wide bg-emerald-50 border-b border-emerald-100 sticky top-0">
               <span>Deal</span>
               <span>Stage</span>
               <span className="text-right">Amount</span>
@@ -147,39 +147,42 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
               <span className="text-right">Time to Deal</span>
             </div>
             
-            <div className="divide-y divide-gray-50">
+            <div>
               {deals?.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">No deals found for this month</p>
               ) : (
-                deals?.map((deal) => {
+                deals?.map((deal, index) => {
                   const stageColor = stageColors[deal.deal_stage || ""] || "bg-gray-100 text-gray-600";
+                  const isEven = index % 2 === 0;
 
                   return (
                     <div
                       key={deal.id}
-                      className="grid grid-cols-[1fr_140px_100px_140px_80px] gap-3 px-3 py-3 hover:bg-gray-50 transition-colors items-center"
+                      className={`grid grid-cols-[1fr_130px_90px_130px_70px] gap-3 px-4 py-3 hover:bg-blue-50 transition-colors items-center border-b border-gray-50 ${isEven ? "bg-white" : "bg-gray-50/50"}`}
                     >
-                      {/* Deal name */}
+                      {/* Deal name - truncated */}
                       <div className="flex items-center gap-2 min-w-0">
-                        <Briefcase className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <span className="font-medium text-gray-900 truncate text-sm">
-                          {deal.deal_name || "Unnamed Deal"}
+                        <Briefcase className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                        <span className="font-medium text-gray-900 text-sm truncate" title={deal.deal_name || "Unnamed Deal"}>
+                          {deal.deal_name 
+                            ? (deal.deal_name.length > 35 ? deal.deal_name.substring(0, 35) + "…" : deal.deal_name)
+                            : "Unnamed Deal"}
                         </span>
                       </div>
                       
                       {/* Stage */}
                       <div>
                         {deal.deal_stage && (
-                          <Badge variant="secondary" className={`${stageColor} text-xs`}>
-                            {deal.deal_stage.length > 18 
-                              ? deal.deal_stage.substring(0, 18) + "…" 
+                          <Badge variant="secondary" className={`${stageColor} text-xs font-medium`}>
+                            {deal.deal_stage.length > 14 
+                              ? deal.deal_stage.substring(0, 14) + "…" 
                               : deal.deal_stage}
                           </Badge>
                         )}
                       </div>
                       
                       {/* Amount */}
-                      <span className="font-semibold text-gray-900 text-sm text-right">
+                      <span className={`font-bold text-sm text-right ${deal.amount ? "text-emerald-600" : "text-gray-400"}`}>
                         {formatCurrency(deal.amount)}
                       </span>
                       
@@ -187,8 +190,8 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
                       <div className="flex items-center gap-1.5 min-w-0">
                         {deal.contact_name ? (
                           <>
-                            <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                            <span className="text-sm text-gray-600 truncate">{deal.contact_name}</span>
+                            <User className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
+                            <span className="text-sm text-gray-700 truncate">{deal.contact_name}</span>
                           </>
                         ) : (
                           <span className="text-sm text-gray-400">—</span>
@@ -198,12 +201,15 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
                       {/* Time to deal */}
                       <div className="flex items-center justify-end gap-1">
                         {deal.days_to_deal !== null ? (
-                          <>
-                            <Clock className="w-3 h-3 text-gray-400" />
-                            <span className="text-xs text-gray-500">
-                              {deal.days_to_deal === 0 ? "Same day" : `${deal.days_to_deal}d`}
-                            </span>
-                          </>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                            deal.days_to_deal <= 7 
+                              ? "bg-emerald-100 text-emerald-700" 
+                              : deal.days_to_deal <= 30 
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-amber-100 text-amber-700"
+                          }`}>
+                            {deal.days_to_deal === 0 ? "Same day" : `${deal.days_to_deal}d`}
+                          </span>
                         ) : (
                           <span className="text-xs text-gray-400">—</span>
                         )}
