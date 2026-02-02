@@ -46,36 +46,10 @@ function KeyFindingsContent() {
 
 export function ExecutiveSummaryDesktop() {
   const isMobile = useIsMobile();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isSticky, setIsSticky] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isMobile) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const scrolledPast = !entry.isIntersecting;
-        setIsSticky(scrolledPast);
-        
-        // Reset expanded state when scrolling back to original position
-        if (!scrolledPast) {
-          setIsExpanded(false);
-        }
-      },
-      { threshold: 0, rootMargin: "-80px 0px 0px 0px" }
-    );
-
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [isMobile]);
 
   if (isMobile) return null;
 
-  const fullPanel = (
+  return (
     <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl border border-blue-100 p-6 relative shadow-lg">
       <div className="flex items-start gap-4">
         <div className="p-3 rounded-xl bg-blue-600 shadow-lg shadow-blue-600/20">
@@ -87,60 +61,6 @@ export function ExecutiveSummaryDesktop() {
         </div>
       </div>
     </div>
-  );
-
-  const compactBar = (
-    <div 
-      className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl border border-blue-100 px-5 py-3 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-      onClick={() => setIsExpanded(!isExpanded)}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-blue-600 shadow-lg shadow-blue-600/20">
-            <Lightbulb className="w-4 h-4 text-white" />
-          </div>
-          <h3 className="font-semibold text-gray-900">Key Findings</h3>
-        </div>
-        <button
-          className="p-1.5 rounded-lg hover:bg-blue-200/50 transition-colors text-gray-500 hover:text-gray-700"
-          aria-label={isExpanded ? "Collapse Key Findings" : "Expand Key Findings"}
-        >
-          <ChevronUp className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? '' : 'rotate-180'}`} />
-        </button>
-      </div>
-      
-      {/* Expandable content */}
-      <div 
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[500px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}
-      >
-        <KeyFindingsContent />
-      </div>
-    </div>
-  );
-
-  return (
-    <>
-      {/* Original position - visible when not sticky */}
-      <div 
-        ref={containerRef}
-        className="transition-opacity duration-300"
-        style={{ opacity: isSticky ? 0 : 1 }}
-      >
-        {fullPanel}
-      </div>
-      
-      {/* Compact floating bar - visible when sticky */}
-      <div
-        className="fixed top-20 left-1/2 -translate-x-1/2 z-40 w-full max-w-[1280px] px-4 transition-all duration-300"
-        style={{
-          opacity: isSticky ? 1 : 0,
-          transform: `translateX(-50%) ${isSticky ? 'translateY(0)' : 'translateY(-20px)'}`,
-          pointerEvents: isSticky ? "auto" : "none",
-        }}
-      >
-        {compactBar}
-      </div>
-    </>
   );
 }
 
