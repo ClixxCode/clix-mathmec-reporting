@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import JSZip from "https://esm.sh/jszip@3.10.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,6 @@ interface ParseRequest {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -45,7 +45,6 @@ Deno.serve(async (req) => {
     let extractedText = '';
 
     if (ext === 'pdf') {
-      // Use pdf-parse library via dynamic import
       extractedText = await extractPdfText(bytes);
     } else if (ext === 'docx') {
       extractedText = await extractDocxText(bytes);
@@ -60,6 +59,13 @@ Deno.serve(async (req) => {
 
     console.log(`Extracted ${extractedText.length} characters from ${fileName}`);
 
+    if (!extractedText || extractedText.trim().length < 10) {
+      return new Response(
+        JSON.stringify({ error: 'Could not extract text from document. Please try a different format.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Upsert to campaign_narratives table
     const { data, error } = await supabase
       .from('campaign_narratives')
@@ -68,7 +74,6 @@ Deno.serve(async (req) => {
         uploaded_content: extractedText,
         uploaded_at: new Date().toISOString(),
         uploaded_filename: fileName,
-        // Keep existing narrative_text if present, otherwise set empty
         narrative_text: '',
         ai_generated: false,
         is_edited: true,
@@ -109,19 +114,82 @@ Deno.serve(async (req) => {
   }
 });
 
-// Extract text from PDF using pdf-lib for basic extraction
+// Extract text from DOCX using JSZip
+async function extractDocxText(bytes: Uint8Array): Promise<string> {
+  try {
+    const zip = new JSZip();
+    const content = await zip.loadAsync(bytes);
+    
+    // Get document.xml which contains the main text
+    const documentXml = await content.file('word/document.xml')?.async('string');
+    
+    if (!documentXml) {
+      console.error('Could not find word/document.xml in DOCX');
+      return '';
+    }
+
+    // Parse XML to extract text content
+    // Extract text between <w:t> tags (Word text elements)
+    const textParts: string[] = [];
+    
+    // Match all <w:t> elements including those with attributes
+    const regex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+    let match;
+    
+    while ((match = regex.exec(documentXml)) !== null) {
+      if (match[1]) {
+        textParts.push(match[1]);
+      }
+    }
+
+    // Also handle paragraph breaks - add newlines between paragraphs
+    let result = '';
+    let inParagraph = false;
+    const paragraphRegex = /<w:p[^>]*>([\s\S]*?)<\/w:p>/g;
+    
+    while ((match = paragraphRegex.exec(documentXml)) !== null) {
+      const paragraphContent = match[1];
+      const paragraphTexts: string[] = [];
+      
+      const textRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+      let textMatch;
+      
+      while ((textMatch = textRegex.exec(paragraphContent)) !== null) {
+        if (textMatch[1]) {
+          paragraphTexts.push(textMatch[1]);
+        }
+      }
+      
+      if (paragraphTexts.length > 0) {
+        result += paragraphTexts.join('') + '\n\n';
+      }
+    }
+
+    // Clean up extra whitespace
+    result = result
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    console.log(`Extracted ${result.length} characters from DOCX`);
+    return result;
+    
+  } catch (err) {
+    console.error('DOCX extraction error:', err);
+    return '';
+  }
+}
+
+// Extract text from PDF - simplified extraction
 async function extractPdfText(bytes: Uint8Array): Promise<string> {
-  // Use a simpler approach - extract readable text content
-  // For production, you'd want a proper PDF parsing library
   const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
   
-  // Extract text between BT and ET markers (PDF text objects)
+  // Try to extract text from PDF text objects (between BT and ET)
   const textMatches: string[] = [];
   const btEtRegex = /BT[\s\S]*?ET/g;
   const matches = text.match(btEtRegex) || [];
   
   for (const match of matches) {
-    // Extract text from Tj and TJ operators
+    // Extract text from Tj operators (show text)
     const tjMatches = match.match(/\(([^)]*)\)\s*Tj/g) || [];
     for (const tj of tjMatches) {
       const content = tj.match(/\(([^)]*)\)/)?.[1] || '';
@@ -129,46 +197,48 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
         textMatches.push(content);
       }
     }
-  }
-  
-  if (textMatches.length > 0) {
-    return textMatches.join(' ').replace(/\\n/g, '\n').replace(/\s+/g, ' ').trim();
-  }
-  
-  // Fallback: try to find any readable text
-  const readableText = text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
-  
-  // Filter out PDF structure commands
-  const lines = readableText.split(' ').filter(word => 
-    word.length > 2 && 
-    !word.match(/^[0-9.]+$/) &&
-    !['obj', 'endobj', 'stream', 'endstream', 'xref', 'trailer', 'startxref'].includes(word.toLowerCase())
-  );
-  
-  return lines.join(' ').substring(0, 50000); // Limit to ~50k chars
-}
-
-// Extract text from DOCX (which is a ZIP file with XML)
-async function extractDocxText(bytes: Uint8Array): Promise<string> {
-  // DOCX is a ZIP file - we'll look for document.xml content
-  // This is a simplified extraction that looks for text content
-  const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-  
-  // Find XML text content between <w:t> tags
-  const textMatches: string[] = [];
-  const regex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
-  let match;
-  
-  while ((match = regex.exec(text)) !== null) {
-    if (match[1]?.trim()) {
-      textMatches.push(match[1]);
+    
+    // Also try TJ arrays
+    const tjArrayMatches = match.match(/\[([^\]]+)\]\s*TJ/g) || [];
+    for (const tjArray of tjArrayMatches) {
+      const innerMatches = tjArray.match(/\(([^)]*)\)/g) || [];
+      for (const inner of innerMatches) {
+        const content = inner.match(/\(([^)]*)\)/)?.[1] || '';
+        if (content.trim()) {
+          textMatches.push(content);
+        }
+      }
     }
   }
   
   if (textMatches.length > 0) {
-    return textMatches.join(' ').trim();
+    const result = textMatches
+      .join(' ')
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    console.log(`Extracted ${result.length} characters from PDF text objects`);
+    return result;
   }
   
-  // Fallback: just extract readable ASCII text
-  return text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 50000);
+  // Fallback: extract any readable ASCII text
+  const readableText = text
+    .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Filter out common PDF structure keywords
+  const filtered = readableText
+    .split(' ')
+    .filter(word => 
+      word.length > 2 && 
+      !word.match(/^[0-9.]+$/) &&
+      !['obj', 'endobj', 'stream', 'endstream', 'xref', 'trailer', 'startxref', 'PDF'].includes(word)
+    )
+    .join(' ');
+  
+  console.log(`Extracted ${filtered.length} characters from PDF (fallback)`);
+  return filtered.substring(0, 50000);
 }
