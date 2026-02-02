@@ -1,102 +1,87 @@
 
-# Two-Row Connected Funnel Metrics
 
-## Overview
-Replace the current fragmented 4-card metrics section with a connected two-row funnel visualization that tells the complete Google Ads performance story from spend to revenue.
+# Conversion Breakdown Enhancement & Interactive Cards
 
-## Visual Design
+## Understanding the Data Gap
 
-### Row 1: Top of Funnel (Google Ads Platform)
-A horizontal flow showing ad platform metrics with arrows connecting each stage:
+You're right - the numbers are:
+- **Google Ads Conversions**: 40 (pixel-tracked intent signals)
+- **Forms (HubSpot)**: 18 Paid Search contacts with "Form Submission" as incoming source
+- **Calls (CTM)**: 36 Google Ads-attributed calls
+- **Total Forms + Calls**: 54
+
+The gap goes the **opposite direction** - we're seeing **more** conversions in our systems than Google reports. This happens because:
+
+1. **Click-to-Call ads**: Users call from a Google Ads call extension but Google may not fire a pixel conversion
+2. **CTM tracking scope**: CTM tracks ALL calls to your tracking numbers, including repeat callers and calls from people who found you via Google but didn't click an ad
+3. **Attribution differences**: CTM marks calls as "Google Ads" based on tracking number routing, not necessarily a confirmed ad click
+
+## Plan
+
+### 1. Add Smart Reconciliation Notice
+
+Display a dynamic disclaimer in the conversion breakdown that:
+- Shows when there's a gap (either direction)
+- Explains the specific scenario (forms+calls > conversions OR conversions > forms+calls)
+- For the "CTM higher" case, explain click-to-call dynamics
+
+### 2. Refresh the Breakdown Styling
+
+Options to consider:
+- **Option A - Inline accordion**: Smoother animation with Radix Collapsible, subtle gradient background
+- **Option B - Slide-out drawer**: More dramatic, good for detailed data
+- **Option C - Refined in-place expand**: Keep current approach but with cleaner typography, better spacing, progress bars showing percentages
+
+I'll implement **Option C** with:
+- Cleaner card layout with icons
+- Visual progress bars for form/call split
+- The reconciliation message integrated naturally
+- Smooth animation using Collapsible primitive
+
+### 3. Add Click-to-View for Contacts & Deals Cards
+
+Make the "Contacts" and "Deals" cards clickable:
+- **Contacts card**: Opens existing `ContactsDialog` modal showing the detailed contact list
+- **Deals card**: Opens a new `DealsDialog` modal showing deal details (similar pattern)
+
+This provides drill-down capability consistent with the Conversions breakdown.
+
+---
+
+## Technical Approach
+
+### File Changes
+
+| File | Changes |
+|------|---------|
+| `src/components/dashboard/FunnelMetrics.tsx` | Add reconciliation logic, improve ConversionBreakdown styling with Collapsible, wire up Contacts/Deals click handlers |
+| `src/components/dashboard/DealsDialog.tsx` | New component - modal showing deal details for selected month |
+| `src/hooks/use-funnel-metrics.tsx` | No changes needed |
+
+### Reconciliation Logic
 
 ```text
-+----------+     +------------+     +--------+     +-------------+
-|  Spend   | --> | Impressions| --> | Clicks | --> | Conversions |
-|  $2,814  |     |   15,092   |     |   982  |     |     19      |
-|          |     |   6.51%    |     | $2.87  |     |   1.93%     |
-+----------+     +------------+     +--------+     +-------------+
-                     CTR              CPC           Conv. Rate
+if (forms + calls) > googleConversions:
+  "CTM captures all calls to tracking numbers, including repeat callers 
+   and click-to-call ads that may not trigger Google's pixel."
+   
+if googleConversions > (forms + calls):
+  "Some Google Ads conversions may not result in CRM records due to 
+   abandoned forms, spam filtering, or tracking delays."
 ```
 
-### Row 2: Bottom of Funnel (Business Outcomes)
-A horizontal flow showing CRM/revenue metrics with arrows:
+### Styling Improvements
 
-```text
-+----------+     +---------+     +------------+     +-------------+
-| Contacts | --> |  Deals  | --> | Won Deals  | --> | Revenue Won |
-|   223    |     |    73   |     |     11     |     |   $77,476   |
-| Paid Src |     |  32.7%  |     |   15.1%    |     | $7,043 avg  |
-+----------+     +---------+     +------------+     +-------------+
-                  Deal Rate       Win Rate          Avg Deal Size
-```
+- Replace inline expand with `Collapsible` for smoother animation
+- Add percentage progress bars for visual context
+- Subtle background gradient transition when expanded
+- Remove harsh ring border, use softer shadow instead
+- Add "tap to expand" hint on hover
 
-### Key Design Elements
-- **Visual Connectors**: Chevron arrows (or gradient lines) between cards showing flow direction
-- **Conversion Rates**: Display drop-off percentages between stages
-- **Row Labels**: "Google Ads Performance" and "Business Outcomes" headers
-- **Consistent Styling**: White cards with subtle shadows, matching current MetricCard aesthetic
-- **Color Coding**: 
-  - Top row: Blue tones (ad spend theme)
-  - Bottom row: Green tones (revenue/success theme)
+### Contacts/Deals Interactivity
 
-## Data Sources
+- Reuse existing `ContactsDialog` for Contacts card
+- Create parallel `DealsDialog` component for Deals card
+- Add visual affordance (subtle hover state, optional chevron)
+- Pass current month context to dialogs
 
-### Top of Funnel (Static for now - pending Google Ads API)
-From `campaign_report.csv` / `locationPerformance` data:
-- Spend: $2,813.85
-- Impressions: 15,092
-- Clicks: 982
-- Conversions: 19
-
-### Bottom of Funnel (Live from database)
-- Contacts: Query `hubspot_contacts` filtered by date + "Paid Search"
-- Deals: Query `hubspot_deals` (all deals have linked contacts)
-- Won Deals: Query where `deal_stage ILIKE '%won%'`
-- Revenue: Sum of `amount` from won deals
-
-## Technical Implementation
-
-### New Component
-Create `src/components/dashboard/FunnelMetrics.tsx`:
-- Accept props or use hooks for both static (ads) and live (CRM) data
-- New hook `useFunnelMetrics()` that combines:
-  - Static campaign totals
-  - Live contact/deal queries from Supabase
-- Responsive grid: 4 columns on desktop, 2x2 on tablet, stacked on mobile
-
-### Component Structure
-```
-FunnelMetrics
-├── FunnelRow (Google Ads Performance)
-│   ├── FunnelCard (Spend)
-│   ├── FunnelConnector (arrow)
-│   ├── FunnelCard (Impressions)
-│   ├── FunnelConnector
-│   ├── FunnelCard (Clicks)
-│   ├── FunnelConnector
-│   └── FunnelCard (Conversions)
-└── FunnelRow (Business Outcomes)
-    ├── FunnelCard (Contacts)
-    ├── FunnelConnector
-    ├── FunnelCard (Deals)
-    ├── FunnelConnector
-    ├── FunnelCard (Won)
-    └── FunnelConnector
-    └── FunnelCard (Revenue)
-```
-
-### Files to Modify
-1. **Create**: `src/components/dashboard/FunnelMetrics.tsx` - New connected funnel component
-2. **Create**: `src/hooks/use-funnel-metrics.tsx` - Hook combining ad data + CRM data
-3. **Update**: `src/pages/Index.tsx` - Replace current MetricCards with FunnelMetrics
-4. **Keep**: Existing MetricCard component (may be useful elsewhere)
-
-### Month Filter Integration
-- Top row: Will use static data (Google Ads API pending)
-- Bottom row: Will filter by selected month using existing `useDashboardFilters` context
-
-## Benefits
-- **Story-Driven**: Shows clear cause-and-effect from ad spend to revenue
-- **Connected Flow**: Visual arrows make the funnel relationship obvious
-- **Conversion Insights**: Drop-off rates between stages highlight optimization opportunities
-- **Live Data Ready**: Bottom row pulls from database, ready for dynamic filtering
