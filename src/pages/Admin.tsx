@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Database, RefreshCw, CheckCircle2, XCircle, ExternalLink, FileText, Phone } from "lucide-react";
+import { ArrowLeft, Database, RefreshCw, CheckCircle2, XCircle, ExternalLink, FileText, Phone, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import mathmecLogo from "@/assets/mathmec-logo.png";
@@ -13,6 +13,7 @@ import { HubSpotContactsCard } from "@/components/admin/HubSpotContactsCard";
 import { HubSpotDealsCard } from "@/components/admin/HubSpotDealsCard";
 import { CampaignNarrativeCard } from "@/components/admin/CampaignNarrativeCard";
 import { CTMStatusCard } from "@/components/admin/CTMStatusCard";
+import { GoogleAdsPerformanceCard } from "@/components/admin/GoogleAdsPerformanceCard";
 
 interface DataSource {
   id: string;
@@ -100,6 +101,22 @@ export default function Admin() {
       </header>
 
       <main className="container py-8 space-y-8">
+        {/* Google Ads Section */}
+        <section>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-blue-100">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Google Ads</h2>
+              <p className="text-sm text-gray-500">Import and manage Google Ads campaign performance data</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <GoogleAdsPerformanceCard />
+          </div>
+        </section>
+
         {/* Data Sources Section */}
         <section>
           <div className="flex items-center gap-3 mb-6">

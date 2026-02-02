@@ -119,6 +119,51 @@ export type Database = {
         }
         Relationships: []
       }
+      google_ads_performance: {
+        Row: {
+          avg_cpc: number | null
+          campaign: string
+          clicks: number
+          conversion_rate: number | null
+          conversions: number
+          cost: number
+          cost_per_conversion: number | null
+          created_at: string
+          currency_code: string | null
+          date: string
+          id: string
+          impressions: number
+        }
+        Insert: {
+          avg_cpc?: number | null
+          campaign: string
+          clicks?: number
+          conversion_rate?: number | null
+          conversions?: number
+          cost?: number
+          cost_per_conversion?: number | null
+          created_at?: string
+          currency_code?: string | null
+          date: string
+          id?: string
+          impressions?: number
+        }
+        Update: {
+          avg_cpc?: number | null
+          campaign?: string
+          clicks?: number
+          conversion_rate?: number | null
+          conversions?: number
+          cost?: number
+          cost_per_conversion?: number | null
+          created_at?: string
+          currency_code?: string | null
+          date?: string
+          id?: string
+          impressions?: number
+        }
+        Relationships: []
+      }
       hubspot_contacts: {
         Row: {
           city: string | null
