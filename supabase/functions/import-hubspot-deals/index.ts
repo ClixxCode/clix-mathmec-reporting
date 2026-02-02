@@ -8,33 +8,31 @@ const corsHeaders = {
 
 // Header mapping: CSV header -> database column
 const HEADER_MAPPING: Record<string, string> = {
-  "Deal ID": "deal_id",
+  "Record ID": "deal_id",
   "Deal Name": "deal_name",
   "Deal Stage": "deal_stage",
   "Pipeline": "pipeline",
   "Amount": "amount",
-  "Closed Won Amount (ACV)": "closed_amount",
+  "Total contract value": "closed_amount",
   "Create Date": "create_date",
   "Close Date": "close_date",
-  "Days to Close": "days_to_close",
+  "Days to close": "days_to_close",
   "Deal owner": "deal_owner",
   "Associated Contact IDs": "associated_contact_id",
   "Original Traffic Source": "original_traffic_source",
   "Original Traffic Source Drill-Down 1": "traffic_source_drill_down_1",
   "Original Traffic Source Drill-Down 2": "traffic_source_drill_down_2",
-  "IP City": "ip_city",
-  "IP State/Region": "ip_state",
-  "IP Country": "ip_country",
+  "Location (synced from contact)": "ip_city",
 };
 
 // Essential columns to keep in raw_data
 const ESSENTIAL_RAW_COLUMNS = [
-  "Deal ID", "Deal Name", "Deal Stage", "Pipeline", "Amount",
-  "Closed Won Amount (ACV)", "Create Date", "Close Date", "Days to Close",
+  "Record ID", "Deal Name", "Deal Stage", "Pipeline", "Amount",
+  "Total contract value", "Create Date", "Close Date", "Days to close",
   "Deal owner", "Associated Contact IDs", "Original Traffic Source",
   "Original Traffic Source Drill-Down 1", "Original Traffic Source Drill-Down 2",
-  "IP City", "IP State/Region", "IP Country", "Incoming Lead Source (synced from Contact)",
-  "Location (synced from contact)", "Lead Status (synced from Contact)",
+  "Location (synced from contact)", "Incoming Lead Source (synced from Contact)",
+  "Closed Won Reason", "Closed Lost Reason",
 ];
 
 // Robust CSV row parser that supports newlines inside quoted fields.
@@ -168,11 +166,11 @@ serve(async (req) => {
       headerIndexMap[header] = index;
     });
 
-    // Find Deal ID column
-    const dealIdIndex = headerIndexMap["Deal ID"];
+    // Find Record ID column (this is the Deal ID in HubSpot exports)
+    const dealIdIndex = headerIndexMap["Record ID"];
     if (dealIdIndex === undefined) {
       return new Response(
-        JSON.stringify({ error: "CSV must contain 'Deal ID' column" }),
+        JSON.stringify({ error: "CSV must contain 'Record ID' column" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
