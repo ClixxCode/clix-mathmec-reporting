@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.generate-campaign-narrative]
 verify_jwt = false
+
+[functions.import-hubspot-deals]
+verify_jwt = false

@@ -194,6 +194,78 @@ export type Database = {
         }
         Relationships: []
       }
+      hubspot_deals: {
+        Row: {
+          amount: number | null
+          associated_contact_id: string | null
+          close_date: string | null
+          closed_amount: number | null
+          create_date: string | null
+          created_at: string
+          days_to_close: number | null
+          deal_id: string
+          deal_name: string | null
+          deal_owner: string | null
+          deal_stage: string | null
+          id: string
+          ip_city: string | null
+          ip_country: string | null
+          ip_state: string | null
+          original_traffic_source: string | null
+          pipeline: string | null
+          raw_data: Json
+          traffic_source_drill_down_1: string | null
+          traffic_source_drill_down_2: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          associated_contact_id?: string | null
+          close_date?: string | null
+          closed_amount?: number | null
+          create_date?: string | null
+          created_at?: string
+          days_to_close?: number | null
+          deal_id: string
+          deal_name?: string | null
+          deal_owner?: string | null
+          deal_stage?: string | null
+          id?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          ip_state?: string | null
+          original_traffic_source?: string | null
+          pipeline?: string | null
+          raw_data: Json
+          traffic_source_drill_down_1?: string | null
+          traffic_source_drill_down_2?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          associated_contact_id?: string | null
+          close_date?: string | null
+          closed_amount?: number | null
+          create_date?: string | null
+          created_at?: string
+          days_to_close?: number | null
+          deal_id?: string
+          deal_name?: string | null
+          deal_owner?: string | null
+          deal_stage?: string | null
+          id?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          ip_state?: string | null
+          original_traffic_source?: string | null
+          pipeline?: string | null
+          raw_data?: Json
+          traffic_source_drill_down_1?: string | null
+          traffic_source_drill_down_2?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
