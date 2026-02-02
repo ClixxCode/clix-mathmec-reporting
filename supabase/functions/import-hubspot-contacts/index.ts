@@ -168,21 +168,7 @@ serve(async (req) => {
       );
     }
 
-    // Delete all existing contacts before importing (replace mode)
-    console.log("Clearing existing contacts...");
-    const { error: deleteError } = await supabase
-      .from("hubspot_contacts")
-      .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000");
-
-    if (deleteError) {
-      console.error("Failed to clear existing contacts:", deleteError);
-      return new Response(
-        JSON.stringify({ error: `Failed to clear existing data: ${deleteError.message}` }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    console.log("Cleared existing contacts");
+    // Upsert mode: update existing records by record_id, insert new ones
 
     // Process in streaming batches to reduce memory
     const BATCH_SIZE = 100;
@@ -248,11 +234,11 @@ serve(async (req) => {
 
       batch.push(record);
 
-      // Insert batch when full
+      // Upsert batch when full
       if (batch.length >= BATCH_SIZE) {
         const { error } = await supabase
           .from("hubspot_contacts")
-          .insert(batch);
+          .upsert(batch, { onConflict: 'record_id' });
 
         if (error) {
           console.error(`Batch error:`, error.message);
@@ -269,11 +255,11 @@ serve(async (req) => {
       }
     }
 
-    // Insert remaining records
+    // Upsert remaining records
     if (batch.length > 0) {
       const { error } = await supabase
         .from("hubspot_contacts")
-        .insert(batch);
+        .upsert(batch, { onConflict: 'record_id' });
 
       if (error) {
         console.error("Final batch error:", error.message);
