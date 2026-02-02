@@ -5,7 +5,6 @@ import { QualityTrendsTable } from "@/components/dashboard/QualityTrendsTable";
 import { LocationPerformance } from "@/components/dashboard/LocationPerformance";
 import { DealsTable } from "@/components/dashboard/DealsTable";
 import { ExecutiveSummaryDesktop, ExecutiveSummaryMobile } from "@/components/dashboard/ExecutiveSummary";
-import { Glossary } from "@/components/dashboard/Glossary";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { DashboardFiltersProvider, useDashboardFilters } from "@/hooks/use-dashboard-filters";
 import { Download, Loader2 } from "lucide-react";
@@ -111,9 +110,6 @@ function DashboardContent() {
         <section>
           <DealsTable />
         </section>
-
-        {/* Glossary */}
-        <Glossary />
 
         {/* Footer */}
         <footer className="text-center text-sm text-gray-400 py-6 border-t border-gray-200">
