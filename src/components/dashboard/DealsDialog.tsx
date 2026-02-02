@@ -137,7 +137,31 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
         ) : (
-          <ScrollArea className="h-[60vh]">
+          <>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <p className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Pipeline Value</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(deals?.reduce((sum, d) => sum + (d.amount || 0), 0) || 0)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">{deals?.length || 0} deals</p>
+              </div>
+              <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-100">
+                <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide mb-1">Closed Won</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(
+                    deals?.filter(d => d.deal_stage?.toLowerCase().includes("won"))
+                      .reduce((sum, d) => sum + (d.amount || 0), 0) || 0
+                  )}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {deals?.filter(d => d.deal_stage?.toLowerCase().includes("won")).length || 0} won
+                </p>
+              </div>
+            </div>
+
+            <ScrollArea className="h-[50vh]">
             {/* Header row */}
             <div className="grid grid-cols-[1fr_130px_90px_130px_70px] gap-3 px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-white border-b border-[#e0e0e0] sticky top-0">
               <span>Deal</span>
@@ -220,6 +244,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
               )}
             </div>
           </ScrollArea>
+          </>
         )}
       </DialogContent>
     </Dialog>
