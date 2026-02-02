@@ -18,9 +18,9 @@
     --popover: 0 0% 100%;
     --popover-foreground: 207 12% 33%;
 
-    /* Mathews Red */
-    --primary: 229 84% 4.902%;
-    --primary-foreground: 210 11% 15%;
+    /* Mathews Red #E31E24 = hsl(358 78% 50%) */
+    --primary: 358 78% 50%;
+    --primary-foreground: 0 0% 100%;
 
     /* Deep Navy/Charcoal */
     --secondary: 207 12% 33%;
