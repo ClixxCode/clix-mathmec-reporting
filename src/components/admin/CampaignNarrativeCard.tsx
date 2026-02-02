@@ -126,6 +126,12 @@ export function CampaignNarrativeCard() {
       });
 
       if (response.error) throw new Error(response.error.message);
+
+      // Backend may return a friendly failure payload (HTTP 200) when AI is temporarily unavailable
+      const result = response.data as any;
+      if (result && result.success === false) {
+        throw new Error(result.error || "Narrative generation failed.");
+      }
       
       queryClient.invalidateQueries({ queryKey: ["campaign-narrative", selectedMonth] });
       

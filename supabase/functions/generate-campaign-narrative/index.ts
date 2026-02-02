@@ -6,6 +6,92 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function callLovableAI({
+  lovableApiKey,
+  systemPrompt,
+  userPrompt,
+  models,
+}: {
+  lovableApiKey: string;
+  systemPrompt: string;
+  userPrompt: string;
+  models: string[];
+}) {
+  const url = 'https://ai.gateway.lovable.dev/v1/chat/completions';
+
+  for (const model of models) {
+    // Retry a couple times for transient 5xx
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const attemptLabel = `${model} (attempt ${attempt + 1}/2)`;
+      console.log(`Calling Lovable AI Gateway: ${attemptLabel}`);
+
+      const aiResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+        }),
+      });
+
+      if (aiResponse.ok) {
+        const aiData = await aiResponse.json();
+        const narrativeText = aiData.choices?.[0]?.message?.content || '';
+        return { ok: true as const, narrativeText, modelUsed: model };
+      }
+
+      const errorText = await aiResponse.text();
+      console.error('AI Gateway error:', aiResponse.status, errorText);
+
+      // Surface known rate/credits issues directly
+      if (aiResponse.status === 429) {
+        return {
+          ok: false as const,
+          status: 429,
+          message: 'Rate limit exceeded. Please try again in a moment.',
+          details: errorText,
+        };
+      }
+      if (aiResponse.status === 402) {
+        return {
+          ok: false as const,
+          status: 402,
+          message: 'AI credits exhausted. Please add credits to continue.',
+          details: errorText,
+        };
+      }
+
+      // For 5xx: small backoff then retry, otherwise fall back to next model
+      if (aiResponse.status >= 500 && attempt < 1) {
+        await sleep(400 * (attempt + 1));
+        continue;
+      }
+
+      // Non-5xx or final attempt: move to next model
+      break;
+    }
+  }
+
+  return {
+    ok: false as const,
+    status: 502,
+    message: 'AI service temporarily unavailable. Please try again shortly.',
+    details: null,
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -23,7 +109,14 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+
+    if (!lovableApiKey) {
+      return new Response(
+        JSON.stringify({ error: 'AI is not configured (missing LOVABLE_API_KEY).' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -84,6 +177,23 @@ serve(async (req) => {
       }
     }
 
+    // Reduce payload size sent to AI: keep category totals + top campaigns + notable examples
+    const topCampaigns = Object.entries(changeSummary.by_campaign as Record<string, { total: number; categories: Record<string, number> }>)
+      .sort((a, b) => (b[1]?.total || 0) - (a[1]?.total || 0))
+      .slice(0, 10)
+      .map(([campaign, data]) => ({ campaign, total: data.total, categories: data.categories }));
+
+    const slimChangeSummary = {
+      total_changes: changeSummary.total_changes,
+      by_category: changeSummary.by_category,
+      top_campaigns: topCampaigns,
+      notable_changes: (changeSummary.notable_changes || []).map((c: any) => ({
+        date: c.date,
+        campaign: c.campaign,
+        description: typeof c.description === 'string' ? c.description.substring(0, 160) : c.description,
+      })),
+    };
+
     // Build the AI prompt
     const monthName = startDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
     
@@ -119,7 +229,7 @@ DO NOT:
     const userPrompt = `Write a campaign management narrative for Matthews Mechanical for ${monthName}.
 
 CHANGE HISTORY SUMMARY:
-${JSON.stringify(changeSummary, null, 2)}
+${JSON.stringify(slimChangeSummary, null, 2)}
 
 ${performance_data ? `PERFORMANCE DATA:
 ${JSON.stringify(performance_data, null, 2)}` : ''}
@@ -132,47 +242,28 @@ Based on the management changes made this month, write a narrative that:
 
 Remember: Your audience runs a metal fabrication business. They want to know if their marketing investment is bringing in quality leads, not technical details about match types or bid strategies.`;
 
-    console.log('Calling Lovable AI Gateway...');
-    
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }),
+    const aiResult = await callLovableAI({
+      lovableApiKey,
+      systemPrompt,
+      userPrompt,
+      // Start with the default preview model, then fall back to stable ones
+      models: ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash', 'google/gemini-2.5-pro'],
     });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI Gateway error:', aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI credits exhausted. Please add credits to continue.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      throw new Error(`AI Gateway error: ${aiResponse.status}`);
+    if (!aiResult.ok) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: aiResult.message,
+          details: aiResult.details,
+          status: aiResult.status,
+        }),
+        // IMPORTANT: return 200 so the frontend can show a friendly toast instead of a hard invoke error.
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const aiData = await aiResponse.json();
-    const narrativeText = aiData.choices?.[0]?.message?.content || '';
+    const narrativeText = aiResult.narrativeText;
     
     console.log('Generated narrative:', narrativeText.substring(0, 200) + '...');
 
