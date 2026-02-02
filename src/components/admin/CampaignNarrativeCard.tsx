@@ -191,10 +191,10 @@ export function CampaignNarrativeCard() {
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">📝</span>
+            <span className="text-2xl">📊</span>
             <div>
               <CardTitle className="text-base flex items-center gap-2">
-                Campaign Management Insights
+                Monthly Executive Summary
                 {changesCount && changesCount > 0 && (
                   <Badge variant="outline" className="text-xs font-medium bg-muted text-muted-foreground border-border">
                     {changesCount.toLocaleString()} changes logged
@@ -202,7 +202,7 @@ export function CampaignNarrativeCard() {
                 )}
               </CardTitle>
               <CardDescription>
-                Upload Google Ads change history and generate AI narratives
+                AI-generated insights from Google Ads, contacts, deals & performance data
               </CardDescription>
             </div>
           </div>
@@ -213,10 +213,10 @@ export function CampaignNarrativeCard() {
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h4 className="font-medium text-sm text-blue-900 mb-2">How to Use</h4>
           <ol className="text-xs text-blue-800 space-y-1.5 list-decimal list-inside">
-            <li>In Google Ads, go to <strong>Tools & Settings → Change History</strong></li>
-            <li>Set your date range (e.g., last month) and download as CSV</li>
-            <li>Upload the CSV below—system/automated changes are filtered out</li>
-            <li>Select a month and click "Generate Narrative" for AI insights</li>
+            <li>Import <strong>HubSpot contacts & deals</strong> using the cards above</li>
+            <li>Import <strong>Google Ads performance</strong> data (top section)</li>
+            <li>Optionally, upload <strong>Google Ads Change History</strong> (Tools → Change History → CSV)</li>
+            <li>Select a month and click "Generate Summary" for a comprehensive AI report</li>
           </ol>
         </div>
 
@@ -304,7 +304,7 @@ export function CampaignNarrativeCard() {
               ) : (
                 <Sparkles className="w-4 h-4" />
               )}
-              {isGenerating ? "Generating..." : narrative ? "Regenerate" : "Generate Narrative"}
+              {isGenerating ? "Generating..." : narrative ? "Regenerate Summary" : "Generate Summary"}
             </Button>
           </div>
         </div>
@@ -321,7 +321,7 @@ export function CampaignNarrativeCard() {
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">
-                  {format(new Date(selectedMonth + "-01"), "MMMM yyyy")} Narrative
+                  {format(new Date(selectedMonth + "-01"), "MMMM yyyy")} Executive Summary
                 </span>
                 {narrative.is_edited && (
                   <Badge variant="outline" className="text-xs">Edited</Badge>
@@ -384,11 +384,9 @@ export function CampaignNarrativeCard() {
         ) : (
           <div className="p-8 text-center border border-dashed border-gray-200 rounded-lg">
             <FileText className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500 mb-1">No narrative for this month</p>
+            <p className="text-sm text-gray-500 mb-1">No executive summary for this month</p>
             <p className="text-xs text-gray-400">
-              {changesCount && changesCount > 0 
-                ? "Click 'Generate Narrative' to create one"
-                : "Upload change history first, then generate"}
+              Click "Generate Summary" to create one from all available data
             </p>
           </div>
         )}
