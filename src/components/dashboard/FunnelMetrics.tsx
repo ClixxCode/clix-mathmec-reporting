@@ -157,123 +157,43 @@ interface ConversionBreakdownProps {
 
 function ConversionBreakdown({ formConversions, callConversions, googleConversions, isLoading }: ConversionBreakdownProps) {
   const totalTracked = formConversions + callConversions;
-  const formPercent = totalTracked > 0 ? Math.round((formConversions / totalTracked) * 100) : 0;
-  const callPercent = totalTracked > 0 ? Math.round((callConversions / totalTracked) * 100) : 0;
-  
   const gap = totalTracked - googleConversions;
   const hasGap = Math.abs(gap) > 0;
   const trackedHigher = gap > 0;
 
   return (
     <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-      <div className="mt-4 bg-gradient-to-b from-white to-blue-50/50 rounded-xl p-4 border border-blue-100/50 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-sm font-semibold text-gray-700">Conversion Breakdown</span>
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button className="text-gray-400 hover:text-blue-600 transition-colors">
-                  <Info className="w-3.5 h-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-sm text-xs">
-                <p className="font-medium mb-1">Why might these numbers differ from Google Ads?</p>
-                <ul className="list-disc list-inside space-y-0.5 text-gray-600">
-                  <li>Google Ads uses its pixel for conversion tracking</li>
-                  <li>Forms come from HubSpot (Paid Search contacts)</li>
-                  <li>Calls come from CTM (all tracked calls)</li>
-                  <li>Attribution windows and tracking methods vary</li>
-                </ul>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-        
-        {/* Form Submissions */}
-        <div className="space-y-3">
-          <div className="bg-white rounded-lg p-3 border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-blue-100 rounded">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                </div>
-                <span className="text-sm font-medium text-gray-700">Form Submissions</span>
-              </div>
-              <span className="text-lg font-bold text-gray-900">
-                {isLoading ? "..." : formConversions}
-              </span>
+      <div className="mt-3 bg-white rounded-lg p-4 border border-blue-100">
+        <div className="grid grid-cols-2 gap-4 mb-3">
+          <div className="flex items-center gap-3">
+            <FileText className="w-5 h-5 text-blue-500" />
+            <div>
+              <p className="text-xl font-bold text-gray-900">{isLoading ? "..." : formConversions}</p>
+              <p className="text-xs text-gray-500">Forms (HubSpot)</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Progress value={formPercent} className="h-2 flex-1" />
-              <span className="text-xs text-gray-500 w-10 text-right">{formPercent}%</span>
-            </div>
-            <p className="text-xs text-gray-400 mt-1">From HubSpot (Paid Search)</p>
           </div>
-          
-          {/* Phone Calls */}
-          <div className="bg-white rounded-lg p-3 border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-amber-100 rounded">
-                  <Phone className="w-4 h-4 text-amber-600" />
-                </div>
-                <span className="text-sm font-medium text-gray-700">Phone Calls</span>
-              </div>
-              <span className="text-lg font-bold text-gray-900">
+          <div className="flex items-center gap-3">
+            <Phone className="w-5 h-5 text-amber-500" />
+            <div>
+              <p className="text-xl font-bold text-gray-900">
                 {isLoading ? "..." : (callConversions > 0 ? callConversions : "—")}
-              </span>
+              </p>
+              <p className="text-xs text-gray-500">
+                {callConversions > 0 ? "Calls (CTM)" : "Calls (connect CTM)"}
+              </p>
             </div>
-            {callConversions > 0 ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <Progress value={callPercent} className="h-2 flex-1 [&>div]:bg-amber-500" />
-                  <span className="text-xs text-gray-500 w-10 text-right">{callPercent}%</span>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">From CTM (Google Ads calls)</p>
-              </>
-            ) : (
-              <p className="text-xs text-gray-400">Connect CTM to see call data</p>
-            )}
           </div>
         </div>
 
-        {/* Reconciliation Notice */}
         {hasGap && (
-          <div className={`mt-4 p-3 rounded-lg flex items-start gap-2.5 ${
-            trackedHigher ? "bg-amber-50 border border-amber-100" : "bg-blue-50 border border-blue-100"
-          }`}>
-            <AlertCircle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-              trackedHigher ? "text-amber-500" : "text-blue-500"
-            }`} />
-            <div className="text-xs leading-relaxed">
-              {trackedHigher ? (
-                <>
-                  <span className="font-medium text-amber-800">
-                    {totalTracked} tracked vs. {googleConversions} Google conversions
-                  </span>
-                  <p className="text-amber-700 mt-0.5">
-                    CTM captures all calls to tracking numbers, including repeat callers and click-to-call ads that may not trigger Google's conversion pixel.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <span className="font-medium text-blue-800">
-                    {totalTracked} tracked vs. {googleConversions} Google conversions
-                  </span>
-                  <p className="text-blue-700 mt-0.5">
-                    Some Google Ads conversions may not result in CRM records due to abandoned forms, spam filtering, or tracking delays.
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
+          <p className="text-xs text-gray-500 leading-relaxed border-t border-gray-100 pt-3">
+            <span className="font-medium">{totalTracked} tracked vs. {googleConversions} Google conversions.</span>{" "}
+            {trackedHigher 
+              ? "CTM captures repeat callers and click-to-call ads that may not trigger Google's pixel."
+              : "Some conversions may not result in CRM records due to abandoned forms or spam filtering."
+            }
+          </p>
         )}
-
-        {/* Total */}
-        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-600">Total Tracked</span>
-          <span className="text-xl font-bold text-gray-900">{isLoading ? "..." : totalTracked}</span>
-        </div>
       </div>
     </CollapsibleContent>
   );
