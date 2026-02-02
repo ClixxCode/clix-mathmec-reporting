@@ -40,7 +40,8 @@ Deno.serve(async (req) => {
     // Find header row (contains "Day" or "Campaign")
     let headerIndex = -1;
     for (let i = 0; i < Math.min(5, lines.length); i++) {
-      if (lines[i].includes('Day') && lines[i].includes('Campaign')) {
+      const line = lines[i].toLowerCase();
+      if (line.includes('day') && line.includes('campaign')) {
         headerIndex = i;
         break;
       }
@@ -54,7 +55,15 @@ Deno.serve(async (req) => {
     }
 
     console.log('Header found at line:', headerIndex);
-    const headers = lines[headerIndex].split('\t').map((h: string) => h.trim().toLowerCase());
+    
+    // Auto-detect delimiter: tabs or commas
+    const headerLine = lines[headerIndex];
+    const tabCount = (headerLine.match(/\t/g) || []).length;
+    const commaCount = (headerLine.match(/,/g) || []).length;
+    const delimiter = tabCount > commaCount ? '\t' : ',';
+    console.log('Detected delimiter:', delimiter === '\t' ? 'TAB' : 'COMMA');
+    
+    const headers = headerLine.split(delimiter).map((h: string) => h.trim().toLowerCase());
     console.log('Headers:', headers);
 
     // Map column indices
@@ -92,7 +101,7 @@ Deno.serve(async (req) => {
       const line = lines[i].trim();
       if (!line) continue;
 
-      const values = line.split('\t').map((v: string) => v.trim());
+      const values = line.split(delimiter).map((v: string) => v.trim());
       
       const dateVal = values[colMap.date] || '';
       const campaignVal = values[colMap.campaign] || '';
