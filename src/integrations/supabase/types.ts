@@ -50,6 +50,72 @@ export type Database = {
         }
         Relationships: []
       }
+      ctm_calls: {
+        Row: {
+          ai_summary: string | null
+          answered: boolean | null
+          call_id: string
+          called_at: string | null
+          caller_number: string | null
+          campaign: string | null
+          created_at: string
+          duration: number | null
+          gclid: string | null
+          id: string
+          location_url: string | null
+          raw_data: Json
+          recording_url: string | null
+          score: number | null
+          source: string | null
+          talk_time: number | null
+          tracking_number: string | null
+          transcript: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          answered?: boolean | null
+          call_id: string
+          called_at?: string | null
+          caller_number?: string | null
+          campaign?: string | null
+          created_at?: string
+          duration?: number | null
+          gclid?: string | null
+          id?: string
+          location_url?: string | null
+          raw_data?: Json
+          recording_url?: string | null
+          score?: number | null
+          source?: string | null
+          talk_time?: number | null
+          tracking_number?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_summary?: string | null
+          answered?: boolean | null
+          call_id?: string
+          called_at?: string | null
+          caller_number?: string | null
+          campaign?: string | null
+          created_at?: string
+          duration?: number | null
+          gclid?: string | null
+          id?: string
+          location_url?: string | null
+          raw_data?: Json
+          recording_url?: string | null
+          score?: number | null
+          source?: string | null
+          talk_time?: number | null
+          tracking_number?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       data_sources: {
         Row: {
           config: Json | null
