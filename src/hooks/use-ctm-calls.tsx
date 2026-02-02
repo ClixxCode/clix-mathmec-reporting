@@ -24,24 +24,14 @@ export interface CTMCallSummary {
   }[];
 }
 
-// CTM Account ID - will need to be configured
-const CTM_ACCOUNT_ID = ""; // User will need to provide this
-
 export function useCTMCalls() {
   const { filters } = useDashboardFilters();
 
   return useQuery({
     queryKey: ["ctm-calls", filters.startDate, filters.endDate],
     queryFn: async (): Promise<CTMCallSummary | null> => {
-      // Skip if no account ID configured
-      if (!CTM_ACCOUNT_ID) {
-        console.log("CTM Account ID not configured");
-        return null;
-      }
-
       const { data, error } = await supabase.functions.invoke("fetch-ctm-calls", {
         body: {
-          accountId: CTM_ACCOUNT_ID,
           startDate: filters.startDate,
           endDate: filters.endDate,
         },
@@ -52,9 +42,14 @@ export function useCTMCalls() {
         throw error;
       }
 
+      if (data?.error) {
+        console.error("CTM API error:", data.error);
+        return null;
+      }
+
       return data;
     },
-    enabled: !!CTM_ACCOUNT_ID,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
   });
 }
