@@ -10,15 +10,22 @@ interface CTMCall {
   caller_number: string;
   tracking_number: string;
   duration: number;
-  talk_time: number;
-  answered: boolean;
+  talk_time?: number;
+  answered?: boolean;
+  status?: string;
+  call_status?: string;
+  business_name?: string;
   called_at: string;
-  source?: {
+  source?: string; // CTM returns source as a string directly
+  tracking_source?: {
     name: string;
   };
   score?: number;
   recording_url?: string;
+  audio?: string;
   transcript?: string;
+  transcription_text?: string;
+  location?: string; // URL with UTM params
   gclid?: string;
   campaign?: string;
 }
@@ -39,6 +46,7 @@ serve(async (req) => {
   try {
     const CTM_API_KEY = Deno.env.get('CTM_API_KEY');
     const CTM_API_SECRET = Deno.env.get('CTM_API_SECRET');
+    const CTM_ACCOUNT_ID = Deno.env.get('CTM_ACCOUNT_ID');
 
     if (!CTM_API_KEY) {
       throw new Error('CTM_API_KEY is not configured');
@@ -46,12 +54,11 @@ serve(async (req) => {
     if (!CTM_API_SECRET) {
       throw new Error('CTM_API_SECRET is not configured');
     }
-
-    const { accountId, startDate, endDate } = await req.json();
-
-    if (!accountId) {
-      throw new Error('accountId is required');
+    if (!CTM_ACCOUNT_ID) {
+      throw new Error('CTM_ACCOUNT_ID is not configured');
     }
+
+    const { startDate, endDate } = await req.json();
 
     // Build date filter params
     const params = new URLSearchParams();
@@ -61,10 +68,10 @@ serve(async (req) => {
 
     const authHeader = btoa(`${CTM_API_KEY}:${CTM_API_SECRET}`);
 
-    console.log(`Fetching CTM calls for account ${accountId} from ${startDate} to ${endDate}`);
+    console.log(`Fetching CTM calls for account ${CTM_ACCOUNT_ID} from ${startDate} to ${endDate}`);
 
     const response = await fetch(
-      `https://api.calltrackingmetrics.com/api/v1/accounts/${accountId}/calls.json?${params.toString()}`,
+      `https://api.calltrackingmetrics.com/api/v1/accounts/${CTM_ACCOUNT_ID}/calls.json?${params.toString()}`,
       {
         method: 'GET',
         headers: {
@@ -86,19 +93,40 @@ serve(async (req) => {
     // Process call data for dashboard
     const calls = data.calls || [];
     
+    // Log first call structure for debugging
+    if (calls.length > 0) {
+      console.log('Sample call structure:', JSON.stringify(calls[0], null, 2));
+    }
+    
     const totalCalls = calls.length;
-    const answeredCalls = calls.filter(c => c.answered).length;
+    // Use talk_time > 0 OR duration > 0 as answered indicator (fallback for different API versions)
+    const answeredCalls = calls.filter(c => 
+      c.answered === true || 
+      (c.talk_time && c.talk_time > 0) || 
+      (c.duration && c.duration > 0)
+    ).length;
     const missedCalls = totalCalls - answeredCalls;
     const totalDuration = calls.reduce((sum, c) => sum + (c.duration || 0), 0);
     const avgDuration = totalCalls > 0 ? Math.round(totalDuration / totalCalls) : 0;
     
-    // Filter Google Ads attributed calls (have gclid or source contains Google/AdWords)
-    const googleAdsCalls = calls.filter(c => 
-      c.gclid || 
-      c.source?.name?.toLowerCase().includes('google') ||
-      c.source?.name?.toLowerCase().includes('adwords') ||
-      c.source?.name?.toLowerCase().includes('ads')
-    );
+    // Filter Google Ads attributed calls
+    const googleAdsCalls = calls.filter(c => {
+      // Source field is a direct string in CTM
+      const sourceName = (typeof c.source === 'string' ? c.source : '').toLowerCase();
+      const location = c.location?.toLowerCase() || '';
+      
+      // Check for Google Ads indicators
+      const hasGoogleSource = sourceName.includes('google') || sourceName.includes('adwords') || sourceName.includes('ads');
+      const hasGclid = location.includes('gclid=') || !!c.gclid;
+      const hasUtmGoogle = location.includes('utm_source=google') || 
+                           location.includes('utm_source=adwords') ||
+                           location.includes('utm_medium=cpc') ||
+                           location.includes('utm_medium=ppc');
+      
+      return hasGoogleSource || hasGclid || hasUtmGoogle;
+    });
+
+    console.log(`Google Ads calls: ${googleAdsCalls.length} out of ${totalCalls}`);
 
     // Calculate lead scores
     const scoredCalls = calls.filter(c => c.score !== undefined && c.score !== null);
@@ -120,12 +148,12 @@ serve(async (req) => {
         id: c.id,
         callerNumber: c.caller_number,
         duration: c.duration,
-        answered: c.answered,
+        answered: c.status === 'answered' || c.call_status === 'answered' || (c.duration > 0),
         calledAt: c.called_at,
-        source: c.source?.name,
+        source: typeof c.source === 'string' ? c.source : c.tracking_source?.name,
         score: c.score,
-        hasRecording: !!c.recording_url,
-        hasTranscript: !!c.transcript,
+        hasRecording: !!(c.recording_url || c.audio),
+        hasTranscript: !!(c.transcript || c.transcription_text),
       })),
     };
 
