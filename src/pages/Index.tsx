@@ -9,7 +9,7 @@ import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { DashboardFiltersProvider, useDashboardFilters } from "@/hooks/use-dashboard-filters";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import mathmecLogo from "@/assets/mathmec-logo.png";
+import mathmecLogo from "@/assets/mathews-logo-white.png";
 import html2pdf from "html2pdf.js";
 
 function DashboardContent() {
@@ -50,16 +50,14 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100">
+      <header className="border-b border-gray-700" style={{ backgroundColor: '#1A3140' }}>
         <div className="container py-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-gray-900 rounded-xl">
-                <img src={mathmecLogo} alt="Mathews Mechanical" className="h-10 w-auto" />
-              </div>
+              <img src={mathmecLogo} alt="Mathews Mechanical" className="h-10 w-auto" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Performance Report</h1>
-                <p className="text-gray-500 text-sm">{monthLabel}</p>
+                <h1 className="text-xl font-bold text-white">Performance Report</h1>
+                <p className="text-gray-300 text-sm">{monthLabel}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 text-sm">
