@@ -5,9 +5,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, User, Building, Mail, Phone, MessageSquare } from "lucide-react";
+import { Loader2, User, Building, Mail, Phone, MessageSquare, PhoneCall } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ContactsDialogProps {
@@ -29,6 +30,15 @@ interface Contact {
   hubspot_create_date: string | null;
 }
 
+interface CTMCall {
+  id: string;
+  caller_number: string | null;
+  ai_summary: string | null;
+  called_at: string | null;
+  duration: number;
+  answered: boolean;
+}
+
 const leadStatusColors: Record<string, string> = {
   "New": "bg-blue-100 text-blue-800",
   "In Progress": "bg-yellow-100 text-yellow-800",
@@ -44,16 +54,24 @@ const getQualityLabel = (score: number | null): { label: string; color: string }
   return { label: "Low", color: "bg-red-100 text-red-800" };
 };
 
+// Normalize phone numbers for comparison (strip non-digits, handle +1 prefix)
+const normalizePhone = (phone: string | null): string => {
+  if (!phone) return "";
+  const digits = phone.replace(/\D/g, "");
+  // Remove leading 1 for US numbers
+  return digits.startsWith("1") && digits.length === 11 ? digits.slice(1) : digits;
+};
+
 export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProps) {
-  const { data: contacts, isLoading } = useQuery({
+  // Parse month for date range
+  const [monthName, year] = month.split(" ");
+  const monthDate = new Date(`${monthName} 1, ${year}`);
+  const startDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const endDate = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
+
+  const { data: contacts, isLoading: contactsLoading } = useQuery({
     queryKey: ["month-contacts", month],
     queryFn: async (): Promise<Contact[]> => {
-      // Parse month string like "Jan 2026" to date range
-      const [monthName, year] = month.split(" ");
-      const monthDate = new Date(`${monthName} 1, ${year}`);
-      const startDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-      const endDate = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
-
       const { data, error } = await supabase
         .from("hubspot_contacts")
         .select("id, first_name, last_name, email, phone_number, company_name, lead_status, quality_score, message, hubspot_create_date")
@@ -68,6 +86,36 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
     enabled: open,
   });
 
+  // Fetch CTM calls for the same period
+  const { data: ctmCalls } = useQuery({
+    queryKey: ["month-ctm-calls", month],
+    queryFn: async (): Promise<CTMCall[]> => {
+      const { data, error } = await supabase
+        .from("ctm_calls")
+        .select("id, caller_number, ai_summary, called_at, duration, answered")
+        .gte("called_at", startDate.toISOString())
+        .lte("called_at", endDate.toISOString())
+        .not("ai_summary", "is", null);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open,
+  });
+
+  // Build a map of normalized phone -> CTM calls
+  const callsByPhone = new Map<string, CTMCall[]>();
+  ctmCalls?.forEach(call => {
+    const normalized = normalizePhone(call.caller_number);
+    if (normalized) {
+      const existing = callsByPhone.get(normalized) || [];
+      existing.push(call);
+      callsByPhone.set(normalized, existing);
+    }
+  });
+
+  const isLoading = contactsLoading;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh]">
@@ -75,6 +123,9 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
           <DialogTitle className="text-xl">
             Paid Search Contacts — {month}
           </DialogTitle>
+          <DialogDescription>
+            Contacts from paid search with matched call recordings and summaries
+          </DialogDescription>
         </DialogHeader>
         
         {isLoading ? (
@@ -90,6 +141,10 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
                 contacts?.map((contact) => {
                   const quality = getQualityLabel(contact.quality_score);
                   const statusColor = leadStatusColors[contact.lead_status || ""] || "bg-gray-100 text-gray-600";
+                  
+                  // Find matching calls by phone number
+                  const normalizedContactPhone = normalizePhone(contact.phone_number);
+                  const matchedCalls = normalizedContactPhone ? callsByPhone.get(normalizedContactPhone) : undefined;
 
                   return (
                     <div
@@ -144,6 +199,33 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
                                   {contact.message}
                                 </p>
                               </div>
+                            </div>
+                          )}
+
+                          {/* CTM Call Summary */}
+                          {matchedCalls && matchedCalls.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {matchedCalls.map((call) => (
+                                <div key={call.id} className="p-3 bg-blue-50 border border-blue-100 rounded-md">
+                                  <div className="flex items-start gap-2">
+                                    <PhoneCall className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-xs font-medium text-blue-700">Call Recording Summary</span>
+                                        <span className="text-xs text-blue-500">
+                                          {call.called_at ? new Date(call.called_at).toLocaleDateString() : ""}
+                                        </span>
+                                        <span className="text-xs text-blue-500">
+                                          ({Math.floor((call.duration || 0) / 60)}:{String((call.duration || 0) % 60).padStart(2, '0')})
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-gray-700">
+                                        {call.ai_summary}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
