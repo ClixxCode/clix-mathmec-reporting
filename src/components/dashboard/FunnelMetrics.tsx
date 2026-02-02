@@ -6,12 +6,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 // Metric definitions for info tooltips
 const metricDefinitions: Record<string, string> = {
-  spend: "Total ad spend for the selected month.",
+  spend: "Total ad spend for the selected month from Google Ads.",
   impressions: "The number of times your ads were shown.",
   ctr: "Click-through rate: Clicks ÷ Impressions. How often people click after seeing the ad.",
   clicks: "The number of clicks on your ads.",
   cpc: "Average cost per click: Total Cost ÷ Clicks.",
-  conversions: "Total conversion actions recorded (forms, calls, etc.) as defined in the Google Ads account.",
+  conversions: "Google Ads tracked conversion actions. This is the master number from Google's tracking pixel.",
   conversionRate: "Conversions ÷ Clicks. How often clicks turn into tracked conversions.",
   contacts: "Contacts from Paid Search sources in HubSpot for the selected month.",
   deals: "Deals associated with Paid Search contacts.",
@@ -157,7 +157,7 @@ function ConversionBreakdown({ formConversions, callConversions, isLoading }: Co
   return (
     <div className="mt-3 bg-white/80 rounded-lg p-3 border border-blue-100">
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs font-medium text-gray-600">Conversion Breakdown</span>
+        <span className="text-xs font-medium text-gray-600">Conversion Breakdown (Estimated)</span>
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -165,8 +165,14 @@ function ConversionBreakdown({ formConversions, callConversions, isLoading }: Co
                 <Info className="w-3 h-3" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs text-xs">
-              <p>Form conversions from Google Ads. Call data requires CTM integration.</p>
+            <TooltipContent side="top" className="max-w-md text-xs">
+              <p className="font-medium mb-1">Why might these numbers differ from Google Ads?</p>
+              <ul className="list-disc list-inside space-y-0.5 text-gray-600">
+                <li>Google Ads uses its pixel for conversion tracking</li>
+                <li>Forms come from HubSpot (Paid Search contacts)</li>
+                <li>Calls come from CTM (if connected)</li>
+                <li>Attribution windows and tracking methods vary</li>
+              </ul>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -179,7 +185,7 @@ function ConversionBreakdown({ formConversions, callConversions, isLoading }: Co
           </div>
           <div>
             <p className="text-lg font-bold text-gray-900">{isLoading ? "..." : formConversions}</p>
-            <p className="text-xs text-gray-500">Forms ({formPercent}%)</p>
+            <p className="text-xs text-gray-500">Forms (HubSpot)</p>
           </div>
         </div>
         
@@ -192,7 +198,7 @@ function ConversionBreakdown({ formConversions, callConversions, isLoading }: Co
               {isLoading ? "..." : (callConversions > 0 ? callConversions : "—")}
             </p>
             <p className="text-xs text-gray-500">
-              {callConversions > 0 ? `Calls (${callPercent}%)` : "Calls (CTM)"}
+              {callConversions > 0 ? "Calls (CTM)" : "Calls (CTM)"}
             </p>
           </div>
         </div>
@@ -227,8 +233,10 @@ export function FunnelMetrics() {
     return `${value.toFixed(1)}%`;
   };
 
-  // For now, assume all Google Ads conversions are forms unless CTM is connected
-  const formConversions = metrics.conversions;
+  // Form submissions = Paid Search contacts from HubSpot
+  // Call conversions = from CTM (if connected)
+  // Note: These may not sum to Google Ads conversions due to different tracking systems
+  const formConversions = metrics.contacts; // HubSpot Paid Search contacts
   const callConversions = ctmData?.googleAdsCalls || 0;
 
   return (
@@ -267,7 +275,7 @@ export function FunnelMetrics() {
           <FunnelConnector variant="blue" />
           <FunnelCard
             title="Conversions"
-            value={metrics.conversions + callConversions}
+            value={formatNumber(metrics.conversions)}
             subtitle={`${formatPercent(metrics.conversionRate)} rate`}
             variant="blue"
             isClickable
@@ -275,6 +283,7 @@ export function FunnelMetrics() {
             onClick={() => setShowConversionBreakdown(!showConversionBreakdown)}
             infoKey="conversions"
             subtitleInfoKey="conversionRate"
+            isLoading={metrics.isLoading}
           />
         </div>
         
