@@ -3,7 +3,6 @@ import { format } from "date-fns";
 import { FunnelMetrics } from "@/components/dashboard/FunnelMetrics";
 import { QualityTrendsTable } from "@/components/dashboard/QualityTrendsTable";
 import { LocationPerformance } from "@/components/dashboard/LocationPerformance";
-import { DealsTable } from "@/components/dashboard/DealsTable";
 import { ExecutiveSummaryDesktop, ExecutiveSummaryMobile } from "@/components/dashboard/ExecutiveSummary";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { DashboardFiltersProvider, useDashboardFilters } from "@/hooks/use-dashboard-filters";
@@ -90,11 +89,6 @@ function DashboardContent() {
       <ExecutiveSummaryMobile />
 
       <main ref={contentRef} className="container py-8 space-y-8">
-        {/* Executive Summary - Sticky on desktop */}
-        <section className="hidden lg:block">
-          <ExecutiveSummaryDesktop />
-        </section>
-
         {/* Funnel Metrics */}
         <section>
           <FunnelMetrics />
@@ -106,9 +100,9 @@ function DashboardContent() {
           <LocationPerformance />
         </section>
 
-        {/* Deals Table */}
+        {/* Key Findings - Below the table */}
         <section>
-          <DealsTable />
+          <ExecutiveSummaryDesktop />
         </section>
 
         {/* Footer */}
