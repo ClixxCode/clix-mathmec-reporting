@@ -4,6 +4,23 @@ import { useCTMCalls } from "@/hooks/use-ctm-calls";
 import { ChevronRight, ChevronDown, Phone, FileText, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+// Metric definitions for info tooltips
+const metricDefinitions: Record<string, string> = {
+  spend: "Total ad spend for the selected month.",
+  impressions: "The number of times your ads were shown.",
+  ctr: "Click-through rate: Clicks ÷ Impressions. How often people click after seeing the ad.",
+  clicks: "The number of clicks on your ads.",
+  cpc: "Average cost per click: Total Cost ÷ Clicks.",
+  conversions: "Total conversion actions recorded (forms, calls, etc.) as defined in the Google Ads account.",
+  conversionRate: "Conversions ÷ Clicks. How often clicks turn into tracked conversions.",
+  contacts: "Contacts from Paid Search sources in HubSpot for the selected month.",
+  deals: "Deals associated with Paid Search contacts.",
+  dealRate: "Deals ÷ Contacts. How often contacts become deals.",
+  won: "Deals closed as won this month.",
+  winRate: "Won Deals ÷ Total Deals. Close rate for deals.",
+  revenue: "Total revenue from closed-won deals this month.",
+};
+
 interface FunnelCardProps {
   title: string;
   value: string | number;
@@ -13,6 +30,8 @@ interface FunnelCardProps {
   onClick?: () => void;
   isClickable?: boolean;
   isExpanded?: boolean;
+  infoKey?: string;
+  subtitleInfoKey?: string;
 }
 
 function FunnelCard({ 
@@ -24,6 +43,8 @@ function FunnelCard({
   onClick,
   isClickable,
   isExpanded,
+  infoKey,
+  subtitleInfoKey,
 }: FunnelCardProps) {
   const borderColor = variant === "blue" ? "border-t-blue-500" : "border-t-emerald-500";
   const hoverClass = isClickable ? "cursor-pointer hover:shadow-md transition-shadow" : "";
@@ -35,9 +56,28 @@ function FunnelCard({
       onClick={onClick}
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide truncate">
-          {title}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide truncate">
+            {title}
+          </p>
+          {infoKey && metricDefinitions[infoKey] && (
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button 
+                    className="text-gray-300 hover:text-gray-500 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Info className="w-3 h-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs">
+                  <p>{metricDefinitions[infoKey]}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
         {isClickable && (
           <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
         )}
@@ -46,7 +86,26 @@ function FunnelCard({
         {isLoading ? "..." : value}
       </p>
       {subtitle && (
-        <p className="text-xs text-gray-400 mt-0.5 truncate">{subtitle}</p>
+        <div className="flex items-center gap-1 mt-0.5">
+          <p className="text-xs text-gray-400 truncate">{subtitle}</p>
+          {subtitleInfoKey && metricDefinitions[subtitleInfoKey] && (
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button 
+                    className="text-gray-300 hover:text-gray-500 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Info className="w-2.5 h-2.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-xs">
+                  <p>{metricDefinitions[subtitleInfoKey]}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
       )}
     </div>
   );
@@ -185,6 +244,7 @@ export function FunnelMetrics() {
             value={formatCurrency(metrics.spend)}
             subtitle="Monthly budget"
             variant="blue"
+            infoKey="spend"
           />
           <FunnelConnector variant="blue" />
           <FunnelCard
@@ -192,6 +252,8 @@ export function FunnelMetrics() {
             value={formatNumber(metrics.impressions)}
             subtitle={`${formatPercent(metrics.ctr)} CTR`}
             variant="blue"
+            infoKey="impressions"
+            subtitleInfoKey="ctr"
           />
           <FunnelConnector variant="blue" />
           <FunnelCard
@@ -199,6 +261,8 @@ export function FunnelMetrics() {
             value={formatNumber(metrics.clicks)}
             subtitle={`$${metrics.cpc.toFixed(2)} CPC`}
             variant="blue"
+            infoKey="clicks"
+            subtitleInfoKey="cpc"
           />
           <FunnelConnector variant="blue" />
           <FunnelCard
@@ -209,6 +273,8 @@ export function FunnelMetrics() {
             isClickable
             isExpanded={showConversionBreakdown}
             onClick={() => setShowConversionBreakdown(!showConversionBreakdown)}
+            infoKey="conversions"
+            subtitleInfoKey="conversionRate"
           />
         </div>
         
@@ -230,6 +296,7 @@ export function FunnelMetrics() {
           subtitle="Paid Search"
           variant="green"
           isLoading={metrics.isLoading}
+          infoKey="contacts"
         />
         <FunnelConnector variant="green" />
         <FunnelCard
@@ -238,6 +305,8 @@ export function FunnelMetrics() {
           subtitle={`${formatPercent(metrics.dealRate)} deal rate`}
           variant="green"
           isLoading={metrics.isLoading}
+          infoKey="deals"
+          subtitleInfoKey="dealRate"
         />
         <FunnelConnector variant="green" />
         <FunnelCard
@@ -246,6 +315,8 @@ export function FunnelMetrics() {
           subtitle={`${formatPercent(metrics.winRate)} win rate`}
           variant="green"
           isLoading={metrics.isLoading}
+          infoKey="won"
+          subtitleInfoKey="winRate"
         />
         <FunnelConnector variant="green" />
         <FunnelCard
@@ -254,6 +325,7 @@ export function FunnelMetrics() {
           subtitle={metrics.wonDeals > 0 ? `${formatCurrency(metrics.avgDealSize)} avg` : "—"}
           variant="green"
           isLoading={metrics.isLoading}
+          infoKey="revenue"
         />
       </FunnelRow>
     </div>

@@ -1,10 +1,20 @@
 import { useState, useMemo } from "react";
 import { useQualityTrends, QualityTrendRow } from "@/hooks/use-contact-analytics";
-import { TrendingUp, TrendingDown, ArrowUp, ArrowDown, ArrowUpDown, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowUp, ArrowDown, ArrowUpDown, Loader2, Info } from "lucide-react";
 import { ContactsDialog } from "./ContactsDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SortKey = "month" | "totalContacts" | "avgQuality";
 type SortDirection = "asc" | "desc";
+
+const qualityScoringInfo = `Quality Score (0-30 points):
+• Service Relevance (0-8): Matches to fabrication, maintenance, material handling
+• Project Specificity (0-7): Dimensions, materials, quantities, drawings
+• Commercial Intent (0-6): Quote requests, urgency, budget, RFQ language
+• Engagement Quality (0-5): Call duration, message detail, referrals
+• Conversion Indicators (0-4): Timeline, urgency signals
+
+High Quality: 20+ points | Low Quality: <10 points`;
 
 export function QualityTrendsTable() {
   const { data: qualityTrends, isLoading, error } = useQualityTrends();
@@ -56,13 +66,30 @@ export function QualityTrendsTable() {
     );
   };
 
-  const SortableHeader = ({ column, children, className = "" }: { column: SortKey; children: React.ReactNode; className?: string }) => (
+  const SortableHeader = ({ column, children, className = "", showInfo = false }: { column: SortKey; children: React.ReactNode; className?: string; showInfo?: boolean }) => (
     <th
       className={`px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 transition-colors select-none ${className}`}
       onClick={() => handleSort(column)}
     >
       <div className={`flex items-center ${className.includes("text-right") ? "justify-end" : ""}`}>
         {children}
+        {showInfo && (
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  className="text-gray-300 hover:text-gray-500 transition-colors ml-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Info className="w-3 h-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs whitespace-pre-line">
+                <p>{qualityScoringInfo}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         <SortIcon column={column} />
       </div>
     </th>
@@ -119,7 +146,7 @@ export function QualityTrendsTable() {
               <SortableHeader column="totalContacts" className="text-right">
                 Total Contacts
               </SortableHeader>
-              <SortableHeader column="avgQuality" className="text-right">
+              <SortableHeader column="avgQuality" className="text-right" showInfo>
                 Avg Quality
               </SortableHeader>
               <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
