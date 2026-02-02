@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
 import { FunnelMetrics } from "@/components/dashboard/FunnelMetrics";
 import { QualityTrendsTable } from "@/components/dashboard/QualityTrendsTable";
 import { LocationPerformance } from "@/components/dashboard/LocationPerformance";
@@ -108,6 +109,9 @@ function DashboardContent() {
         {/* Footer */}
         <footer className="text-center text-sm text-gray-400 py-6 border-t border-gray-200">
           <p>Report generated for Mathews Mechanical • {monthLabel}</p>
+          <Link to="/admin" className="text-gray-400 hover:text-gray-600 transition-colors mt-2 inline-block">
+            Admin
+          </Link>
         </footer>
       </main>
     </div>
