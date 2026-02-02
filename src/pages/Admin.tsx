@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Database, RefreshCw, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, Database, RefreshCw, CheckCircle2, XCircle, ExternalLink, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import mathmecLogo from "@/assets/mathmec-logo.png";
 import { HubSpotContactsCard } from "@/components/admin/HubSpotContactsCard";
+import { CampaignNarrativeCard } from "@/components/admin/CampaignNarrativeCard";
 
 interface DataSource {
   id: string;
@@ -216,6 +217,22 @@ export default function Admin() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <HubSpotContactsCard />
+          </div>
+        </section>
+
+        {/* Campaign Narrative Section */}
+        <section>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-purple-100">
+              <FileText className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Campaign Management Insights</h2>
+              <p className="text-sm text-gray-500">AI-generated narratives from Google Ads change history</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <CampaignNarrativeCard />
           </div>
         </section>
       </main>

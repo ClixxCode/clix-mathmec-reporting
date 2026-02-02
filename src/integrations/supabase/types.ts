@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_narratives: {
+        Row: {
+          ai_generated: boolean
+          change_summary: Json | null
+          created_at: string
+          id: string
+          is_edited: boolean
+          month_year: string
+          narrative_text: string
+          performance_context: Json | null
+          updated_at: string
+        }
+        Insert: {
+          ai_generated?: boolean
+          change_summary?: Json | null
+          created_at?: string
+          id?: string
+          is_edited?: boolean
+          month_year: string
+          narrative_text: string
+          performance_context?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          ai_generated?: boolean
+          change_summary?: Json | null
+          created_at?: string
+          id?: string
+          is_edited?: boolean
+          month_year?: string
+          narrative_text?: string
+          performance_context?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       data_sources: {
         Row: {
           config: Json | null
@@ -44,6 +80,42 @@ export type Database = {
           name?: string
           type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      google_ads_changes: {
+        Row: {
+          ad_group: string | null
+          campaign: string | null
+          change_category: string | null
+          change_date: string
+          change_description: string
+          created_at: string
+          id: string
+          raw_data: Json
+          user_email: string | null
+        }
+        Insert: {
+          ad_group?: string | null
+          campaign?: string | null
+          change_category?: string | null
+          change_date: string
+          change_description: string
+          created_at?: string
+          id?: string
+          raw_data: Json
+          user_email?: string | null
+        }
+        Update: {
+          ad_group?: string | null
+          campaign?: string | null
+          change_category?: string | null
+          change_date?: string
+          change_description?: string
+          created_at?: string
+          id?: string
+          raw_data?: Json
+          user_email?: string | null
         }
         Relationships: []
       }
