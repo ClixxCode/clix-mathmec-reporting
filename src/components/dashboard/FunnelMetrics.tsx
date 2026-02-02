@@ -211,10 +211,7 @@ export function FunnelMetrics() {
   const currentMonth = format(filters.selectedMonth, "MMM yyyy");
 
   const formatCurrency = (value: number) => {
-    if (value >= 1000) {
-      return `$${(value / 1000).toFixed(1)}k`.replace(".0k", "k");
-    }
-    return `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatNumber = (value: number) => {
