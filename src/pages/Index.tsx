@@ -54,7 +54,7 @@ function DashboardContent() {
         <div className="container py-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
-              <img src={mathmecLogo} alt="Mathews Mechanical" className="h-14 w-auto" />
+              <img src={mathmecLogo} alt="Mathews Mechanical" className="h-20 w-auto" />
               <div>
                 <h1 className="text-xl font-bold text-white">Performance Report</h1>
                 <p className="text-gray-300 text-sm">{monthLabel}</p>
