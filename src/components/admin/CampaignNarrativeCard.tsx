@@ -203,6 +203,17 @@ export function CampaignNarrativeCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Instructions */}
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-sm text-blue-900 mb-2">How to Use</h4>
+          <ol className="text-xs text-blue-800 space-y-1.5 list-decimal list-inside">
+            <li>In Google Ads, go to <strong>Tools & Settings → Change History</strong></li>
+            <li>Set your date range (e.g., last month) and download as CSV</li>
+            <li>Upload the CSV below—system/automated changes are filtered out</li>
+            <li>Select a month and click "Generate Narrative" for AI insights</li>
+          </ol>
+        </div>
+
         {/* Upload Section */}
         <div className="p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50/50">
           <div className="flex items-center gap-4">
@@ -212,25 +223,28 @@ export function CampaignNarrativeCard() {
                 Upload Google Ads change history CSV to analyze management decisions
               </p>
             </div>
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-              />
-              <Button variant="outline" size="sm" className="gap-2" disabled={isUploading} asChild>
-                <span>
-                  {isUploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4" />
-                  )}
-                  {isUploading ? "Importing..." : "Upload CSV"}
-                </span>
-              </Button>
-            </label>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2" 
+              disabled={isUploading}
+              onClick={() => document.getElementById('change-history-upload')?.click()}
+            >
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              {isUploading ? "Importing..." : "Upload CSV"}
+            </Button>
+            <input
+              id="change-history-upload"
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleFileUpload}
+              disabled={isUploading}
+            />
           </div>
           
           {uploadSummary && (
