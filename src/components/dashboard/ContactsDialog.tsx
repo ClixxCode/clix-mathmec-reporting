@@ -8,9 +8,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, User, Building, Mail, Phone, MessageSquare, PhoneCall, Target } from "lucide-react";
+import { Loader2, Building, Mail, Phone, MessageSquare, PhoneCall, Target, ChevronDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 interface ContactsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -62,6 +63,126 @@ const normalizePhone = (phone: string | null): string => {
   // Remove leading 1 for US numbers
   return digits.startsWith("1") && digits.length === 11 ? digits.slice(1) : digits;
 };
+
+// Contact Card Component
+function ContactCard({ 
+  contact, 
+  quality, 
+  statusColor, 
+  matchedCalls 
+}: { 
+  contact: Contact; 
+  quality: { label: string; color: string }; 
+  statusColor: string; 
+  matchedCalls?: CTMCall[];
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className="rounded-lg border border-gray-100 hover:border-gray-200 transition-colors bg-white overflow-hidden">
+        <CollapsibleTrigger asChild>
+          <button className="w-full p-4 flex items-center justify-between gap-4 text-left hover:bg-gray-50 transition-colors">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <span className="font-medium text-gray-900 truncate">
+                {contact.first_name || ""} {contact.last_name || "Unknown"}
+              </span>
+              <Badge variant="secondary" className={quality.color}>
+                {contact.quality_score !== null 
+                  ? `${quality.label} (${contact.quality_score})` 
+                  : quality.label}
+              </Badge>
+              {contact.lead_status && (
+                <Badge variant="secondary" className={statusColor}>
+                  {contact.lead_status}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {contact.traffic_source_drill_down_1 && (
+                <div className="flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="text-xs text-blue-600 font-medium max-w-[150px] truncate">
+                    {contact.traffic_source_drill_down_1}
+                  </span>
+                </div>
+              )}
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {contact.hubspot_create_date 
+                  ? new Date(contact.hubspot_create_date).toLocaleDateString()
+                  : "—"}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+          </button>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent>
+          <div className="px-4 pb-4 pt-0 border-t border-gray-50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 mt-3">
+              {contact.company_name && (
+                <div className="flex items-center gap-2">
+                  <Building className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="truncate">{contact.company_name}</span>
+                </div>
+              )}
+              {contact.email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="truncate">{contact.email}</span>
+                </div>
+              )}
+              {contact.phone_number && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-gray-400" />
+                  <span>{contact.phone_number}</span>
+                </div>
+              )}
+            </div>
+
+            {contact.message && (
+              <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-gray-600">
+                    {contact.message}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* CTM Call Summary */}
+            {matchedCalls && matchedCalls.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {matchedCalls.map((call) => (
+                  <div key={call.id} className="p-3 bg-blue-50 border border-blue-100 rounded-md">
+                    <div className="flex items-start gap-2">
+                      <PhoneCall className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-blue-700">Call Recording Summary</span>
+                          <span className="text-xs text-blue-500">
+                            {call.called_at ? new Date(call.called_at).toLocaleDateString() : ""}
+                          </span>
+                          <span className="text-xs text-blue-500">
+                            ({Math.floor((call.duration || 0) / 60)}:{String((call.duration || 0) % 60).padStart(2, '0')})
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700">
+                          {call.ai_summary}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
 
 export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProps) {
   // Parse month for date range
@@ -148,104 +269,13 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
                   const matchedCalls = normalizedContactPhone ? callsByPhone.get(normalizedContactPhone) : undefined;
 
                   return (
-                    <div
+                    <ContactCard
                       key={contact.id}
-                      className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors bg-white"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <User className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium text-gray-900">
-                              {contact.first_name || ""} {contact.last_name || "Unknown"}
-                            </span>
-                            {contact.lead_status && (
-                              <Badge variant="secondary" className={statusColor}>
-                                {contact.lead_status}
-                              </Badge>
-                            )}
-                            <Badge variant="secondary" className={quality.color}>
-                              {contact.quality_score !== null 
-                                ? `${quality.label} (${contact.quality_score})` 
-                                : quality.label}
-                            </Badge>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-                            {contact.company_name && (
-                              <div className="flex items-center gap-2">
-                                <Building className="w-3.5 h-3.5 text-gray-400" />
-                                <span className="truncate">{contact.company_name}</span>
-                              </div>
-                            )}
-                            {contact.email && (
-                              <div className="flex items-center gap-2">
-                                <Mail className="w-3.5 h-3.5 text-gray-400" />
-                                <span className="truncate">{contact.email}</span>
-                              </div>
-                            )}
-                            {contact.phone_number && (
-                              <div className="flex items-center gap-2">
-                                <Phone className="w-3.5 h-3.5 text-gray-400" />
-                                <span>{contact.phone_number}</span>
-                              </div>
-                            )}
-                            {contact.traffic_source_drill_down_1 && (
-                              <div className="flex items-center gap-2">
-                                <Target className="w-3.5 h-3.5 text-blue-400" />
-                                <span className="text-blue-600 font-medium truncate">
-                                  {contact.traffic_source_drill_down_1}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {contact.message && (
-                            <div className="mt-3 p-3 bg-gray-50 rounded-md">
-                              <div className="flex items-start gap-2">
-                                <MessageSquare className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                <p className="text-sm text-gray-600 line-clamp-3">
-                                  {contact.message}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* CTM Call Summary */}
-                          {matchedCalls && matchedCalls.length > 0 && (
-                            <div className="mt-3 space-y-2">
-                              {matchedCalls.map((call) => (
-                                <div key={call.id} className="p-3 bg-blue-50 border border-blue-100 rounded-md">
-                                  <div className="flex items-start gap-2">
-                                    <PhoneCall className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-xs font-medium text-blue-700">Call Recording Summary</span>
-                                        <span className="text-xs text-blue-500">
-                                          {call.called_at ? new Date(call.called_at).toLocaleDateString() : ""}
-                                        </span>
-                                        <span className="text-xs text-blue-500">
-                                          ({Math.floor((call.duration || 0) / 60)}:{String((call.duration || 0) % 60).padStart(2, '0')})
-                                        </span>
-                                      </div>
-                                      <p className="text-sm text-gray-700">
-                                        {call.ai_summary}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="text-xs text-gray-400 whitespace-nowrap">
-                          {contact.hubspot_create_date 
-                            ? new Date(contact.hubspot_create_date).toLocaleDateString()
-                            : "—"}
-                        </div>
-                      </div>
-                    </div>
+                      contact={contact}
+                      quality={quality}
+                      statusColor={statusColor}
+                      matchedCalls={matchedCalls}
+                    />
                   );
                 })
               )}
