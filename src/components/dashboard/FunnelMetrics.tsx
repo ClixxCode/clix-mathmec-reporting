@@ -233,10 +233,9 @@ export function FunnelMetrics() {
     return `${value.toFixed(1)}%`;
   };
 
-  // Form submissions = Paid Search contacts from HubSpot
+  // Form submissions = Paid Search contacts with Incoming Lead Source = "Form Submission"
   // Call conversions = from CTM (if connected)
-  // Note: These may not sum to Google Ads conversions due to different tracking systems
-  const formConversions = metrics.contacts; // HubSpot Paid Search contacts
+  const formConversions = metrics.formSubmissions;
   const callConversions = ctmData?.googleAdsCalls || 0;
 
   return (
