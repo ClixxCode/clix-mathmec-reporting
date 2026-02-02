@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import mathmecLogo from "@/assets/mathmec-logo.png";
 import { HubSpotContactsCard } from "@/components/admin/HubSpotContactsCard";
+import { HubSpotDealsCard } from "@/components/admin/HubSpotDealsCard";
 import { CampaignNarrativeCard } from "@/components/admin/CampaignNarrativeCard";
 
 interface DataSource {
@@ -204,19 +205,20 @@ export default function Admin() {
           )}
         </section>
 
-        {/* HubSpot Contacts Section */}
+        {/* HubSpot Data Section */}
         <section>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-orange-100">
               <Database className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Contact Management</h2>
-              <p className="text-sm text-gray-500">Import and analyze HubSpot contact data</p>
+              <h2 className="text-lg font-semibold text-gray-900">HubSpot Data</h2>
+              <p className="text-sm text-gray-500">Import and manage contacts and deals from HubSpot exports</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <HubSpotContactsCard />
+            <HubSpotDealsCard />
           </div>
         </section>
 
