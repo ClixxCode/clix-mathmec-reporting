@@ -62,9 +62,6 @@ function DashboardContent() {
             </div>
             <div className="flex items-center gap-3 text-sm">
               <MonthSelector />
-              <span className="px-4 py-2 bg-blue-600 text-white rounded-xl font-medium shadow-sm shadow-blue-600/20">
-                One-Pager Dashboard
-              </span>
               <Button
                 onClick={handleDownloadPDF}
                 disabled={isGenerating}
@@ -77,7 +74,7 @@ function DashboardContent() {
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                {isGenerating ? "Generating..." : "Download PDF"}
+                {isGenerating ? "Generating..." : "Download One-Pager"}
               </Button>
             </div>
           </div>
