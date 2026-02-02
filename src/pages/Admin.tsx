@@ -125,7 +125,7 @@ export default function Admin() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {dataSources?.filter(source => source.type !== 'call_tracking_metrics').map((source) => {
+              {dataSources?.filter(source => source.type !== 'call_tracking_metrics' && source.type !== 'google_ads').map((source) => {
                 const meta = dataSourceMeta[source.type] || {
                   description: "External data source",
                   icon: "🔗",
