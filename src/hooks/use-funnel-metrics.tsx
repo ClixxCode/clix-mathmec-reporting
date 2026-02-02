@@ -2,14 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDashboardFilters } from "./use-dashboard-filters";
 
-// Static Google Ads data from campaign_report.csv (pending API integration)
-const STATIC_ADS_DATA = {
-  spend: 2813.85,
-  impressions: 15092,
-  clicks: 982,
-  conversions: 19,
-};
-
 export interface FunnelMetrics {
   // Top of Funnel (Google Ads)
   spend: number;
@@ -34,6 +26,33 @@ export interface FunnelMetrics {
 
 export function useFunnelMetrics(): FunnelMetrics {
   const { filters } = useDashboardFilters();
+
+  // Query Google Ads performance data for selected month
+  const { data: adsData, isLoading: adsLoading } = useQuery({
+    queryKey: ["google-ads-performance", filters.startDate, filters.endDate],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("google_ads_performance")
+        .select("cost, impressions, clicks, conversions")
+        .gte("date", filters.startDate)
+        .lte("date", filters.endDate);
+
+      if (error) throw error;
+
+      // Aggregate totals across all campaigns
+      const totals = (data || []).reduce(
+        (acc, row) => ({
+          spend: acc.spend + (Number(row.cost) || 0),
+          impressions: acc.impressions + (Number(row.impressions) || 0),
+          clicks: acc.clicks + (Number(row.clicks) || 0),
+          conversions: acc.conversions + (Number(row.conversions) || 0),
+        }),
+        { spend: 0, impressions: 0, clicks: 0, conversions: 0 }
+      );
+
+      return totals;
+    },
+  });
 
   // Query Paid Search contacts for selected month
   const { data: contactsData, isLoading: contactsLoading } = useQuery({
@@ -81,22 +100,21 @@ export function useFunnelMetrics(): FunnelMetrics {
     },
   });
 
-  // Calculate derived metrics
+  // Extract values with fallbacks
+  const spend = adsData?.spend || 0;
+  const impressions = adsData?.impressions || 0;
+  const clicks = adsData?.clicks || 0;
+  const conversions = adsData?.conversions || 0;
+
   const contacts = contactsData || 0;
   const deals = dealsData?.totalDeals || 0;
   const wonDeals = dealsData?.wonCount || 0;
   const revenue = dealsData?.totalRevenue || 0;
 
   // Top of funnel calculations
-  const ctr = STATIC_ADS_DATA.impressions > 0
-    ? (STATIC_ADS_DATA.clicks / STATIC_ADS_DATA.impressions) * 100
-    : 0;
-  const cpc = STATIC_ADS_DATA.clicks > 0
-    ? STATIC_ADS_DATA.spend / STATIC_ADS_DATA.clicks
-    : 0;
-  const conversionRate = STATIC_ADS_DATA.clicks > 0
-    ? (STATIC_ADS_DATA.conversions / STATIC_ADS_DATA.clicks) * 100
-    : 0;
+  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+  const cpc = clicks > 0 ? spend / clicks : 0;
+  const conversionRate = clicks > 0 ? (conversions / clicks) * 100 : 0;
 
   // Bottom of funnel calculations
   const dealRate = contacts > 0 ? (deals / contacts) * 100 : 0;
@@ -104,11 +122,12 @@ export function useFunnelMetrics(): FunnelMetrics {
   const avgDealSize = wonDeals > 0 ? revenue / wonDeals : 0;
 
   return {
-    // Static ads data
-    spend: STATIC_ADS_DATA.spend,
-    impressions: STATIC_ADS_DATA.impressions,
-    clicks: STATIC_ADS_DATA.clicks,
-    conversions: STATIC_ADS_DATA.conversions,
+    // Live Google Ads data
+    spend,
+    impressions,
+    clicks,
+    conversions,
+
     ctr,
     cpc,
     conversionRate,
@@ -122,6 +141,6 @@ export function useFunnelMetrics(): FunnelMetrics {
     winRate,
     avgDealSize,
 
-    isLoading: contactsLoading || dealsLoading,
+    isLoading: adsLoading || contactsLoading || dealsLoading,
   };
 }
