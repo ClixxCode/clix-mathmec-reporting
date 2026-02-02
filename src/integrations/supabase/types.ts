@@ -25,6 +25,9 @@ export type Database = {
           narrative_text: string
           performance_context: Json | null
           updated_at: string
+          uploaded_at: string | null
+          uploaded_content: string | null
+          uploaded_filename: string | null
         }
         Insert: {
           ai_generated?: boolean
@@ -36,6 +39,9 @@ export type Database = {
           narrative_text: string
           performance_context?: Json | null
           updated_at?: string
+          uploaded_at?: string | null
+          uploaded_content?: string | null
+          uploaded_filename?: string | null
         }
         Update: {
           ai_generated?: boolean
@@ -47,6 +53,9 @@ export type Database = {
           narrative_text?: string
           performance_context?: Json | null
           updated_at?: string
+          uploaded_at?: string | null
+          uploaded_content?: string | null
+          uploaded_filename?: string | null
         }
         Relationships: []
       }
