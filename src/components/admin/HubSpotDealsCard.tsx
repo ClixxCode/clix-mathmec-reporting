@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, DollarSign, TrendingUp, RefreshCw, CheckCircle2, AlertCircle, Link2 } from "lucide-react";
+import { Upload, DollarSign, TrendingUp, RefreshCw, CheckCircle2, AlertCircle, Link2, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ImportSummary {
@@ -20,6 +20,7 @@ interface DealsAnalytics {
   linked_deals: number;
   total_revenue: number;
   won_deals: number;
+  last_import: string | null;
 }
 
 export function HubSpotDealsCard() {
@@ -53,11 +54,19 @@ export function HubSpotDealsCard() {
       const wonDeals = wonDealsData?.length || 0;
       const totalRevenue = wonDealsData?.reduce((sum, d) => sum + (Number(d.amount) || 0), 0) || 0;
 
+      // Get last import timestamp
+      const { data: lastImportData } = await supabase
+        .from("hubspot_deals")
+        .select("created_at")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
       return {
         total_deals: totalDeals || 0,
         linked_deals: linkedDeals || 0,
         total_revenue: totalRevenue,
         won_deals: wonDeals,
+        last_import: lastImportData?.[0]?.created_at || null,
       } as DealsAnalytics;
     },
   });
@@ -241,6 +250,12 @@ export function HubSpotDealsCard() {
           </div>
         ) : analytics ? (
           <div className="space-y-2">
+            {analytics.last_import && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                <Clock className="w-3 h-3" />
+                Last import: {new Date(analytics.last_import).toLocaleString()}
+              </div>
+            )}
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2 text-gray-600">
                 <TrendingUp className="w-4 h-4" />
