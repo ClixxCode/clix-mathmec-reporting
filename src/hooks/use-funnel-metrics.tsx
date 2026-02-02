@@ -14,6 +14,7 @@ export interface FunnelMetrics {
 
   // Bottom of Funnel (Business Outcomes)
   contacts: number;
+  formSubmissions: number; // Contacts with Incoming Lead Source = Form Submission
   deals: number;
   wonDeals: number;
   revenue: number;
@@ -58,15 +59,26 @@ export function useFunnelMetrics(): FunnelMetrics {
   const { data: contactsData, isLoading: contactsLoading } = useQuery({
     queryKey: ["funnel-contacts", filters.startDate, filters.endDate],
     queryFn: async () => {
-      const { count, error } = await supabase
+      // Get all Paid Search contacts
+      const { data, error } = await supabase
         .from("hubspot_contacts")
-        .select("*", { count: "exact", head: true })
+        .select("raw_data")
         .ilike("original_traffic_source", "Paid Search")
         .gte("hubspot_create_date", filters.startDate)
         .lte("hubspot_create_date", filters.endDate + "T23:59:59");
 
       if (error) throw error;
-      return count || 0;
+
+      const allContacts = data || [];
+      const formSubmissions = allContacts.filter((c) => {
+        const incomingSource = (c.raw_data as Record<string, unknown>)?.["Incoming Lead Source"];
+        return incomingSource === "Form Submission";
+      });
+
+      return {
+        total: allContacts.length,
+        formSubmissions: formSubmissions.length,
+      };
     },
   });
 
@@ -106,7 +118,8 @@ export function useFunnelMetrics(): FunnelMetrics {
   const clicks = adsData?.clicks || 0;
   const conversions = adsData?.conversions || 0;
 
-  const contacts = contactsData || 0;
+  const contacts = contactsData?.total || 0;
+  const formSubmissions = contactsData?.formSubmissions || 0;
   const deals = dealsData?.totalDeals || 0;
   const wonDeals = dealsData?.wonCount || 0;
   const revenue = dealsData?.totalRevenue || 0;
@@ -134,6 +147,7 @@ export function useFunnelMetrics(): FunnelMetrics {
 
     // Live CRM data
     contacts,
+    formSubmissions,
     deals,
     wonDeals,
     revenue,
