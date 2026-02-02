@@ -88,6 +88,33 @@ function KeyFindingsContent() {
     setUploadedContent(null);
   };
 
+  const markdownComponents = {
+    h1: ({ children }: { children?: React.ReactNode }) => (
+      <h1 className="text-xl font-bold text-foreground mt-6 mb-3 first:mt-0">{children}</h1>
+    ),
+    h2: ({ children }: { children?: React.ReactNode }) => (
+      <h2 className="text-lg font-bold text-foreground mt-5 mb-2">{children}</h2>
+    ),
+    h3: ({ children }: { children?: React.ReactNode }) => (
+      <h3 className="text-base font-semibold text-foreground mt-4 mb-2">{children}</h3>
+    ),
+    p: ({ children }: { children?: React.ReactNode }) => (
+      <p className="text-sm text-muted-foreground leading-relaxed my-3">{children}</p>
+    ),
+    ul: ({ children }: { children?: React.ReactNode }) => (
+      <ul className="list-disc list-outside ml-5 my-3 space-y-2">{children}</ul>
+    ),
+    ol: ({ children }: { children?: React.ReactNode }) => (
+      <ol className="list-decimal list-outside ml-5 my-3 space-y-2">{children}</ol>
+    ),
+    li: ({ children }: { children?: React.ReactNode }) => (
+      <li className="text-sm text-muted-foreground leading-relaxed">{children}</li>
+    ),
+    strong: ({ children }: { children?: React.ReactNode }) => (
+      <strong className="font-semibold text-foreground">{children}</strong>
+    ),
+  };
+
   // Show uploaded content if available
   if (uploadedContent) {
     return (
@@ -96,8 +123,8 @@ function KeyFindingsContent() {
           <FileText className="w-4 h-4" />
           <span>Uploaded document</span>
         </div>
-        <div className="prose prose-sm max-w-none text-muted-foreground prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-strong:text-foreground">
-          <ReactMarkdown>{uploadedContent}</ReactMarkdown>
+        <div className="max-w-none">
+          <ReactMarkdown components={markdownComponents}>{uploadedContent}</ReactMarkdown>
         </div>
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <span className="text-xs text-muted-foreground">Uploaded content</span>
@@ -170,8 +197,8 @@ function KeyFindingsContent() {
 
   return (
     <div className="space-y-4">
-      <div className="prose prose-sm max-w-none text-muted-foreground prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-strong:text-foreground">
-        <ReactMarkdown>{narrative}</ReactMarkdown>
+      <div className="max-w-none">
+        <ReactMarkdown components={markdownComponents}>{narrative}</ReactMarkdown>
       </div>
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <span className="text-xs text-muted-foreground">AI-generated summary</span>
@@ -215,13 +242,13 @@ export function ExecutiveSummaryDesktop() {
   if (isMobile) return null;
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl border border-blue-100 p-6 relative shadow-lg">
+    <div className="bg-card rounded-2xl border border-border p-6 relative shadow-sm">
       <div className="flex items-start gap-4">
-        <div className="p-3 rounded-xl bg-blue-600 shadow-lg shadow-blue-600/20 flex-shrink-0">
-          <Lightbulb className="w-5 h-5 text-white" />
+        <div className="p-3 rounded-xl bg-primary shadow-lg shadow-primary/20 flex-shrink-0">
+          <Lightbulb className="w-5 h-5 text-primary-foreground" />
         </div>
         <div className="space-y-4 flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 text-lg">Key Findings</h3>
+          <h3 className="font-semibold text-foreground text-lg">Key Findings</h3>
           <KeyFindingsContent />
         </div>
       </div>
@@ -240,10 +267,10 @@ export function ExecutiveSummaryMobile() {
       {/* Floating button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-blue-600 shadow-lg shadow-blue-600/30 hover:bg-blue-700 transition-colors"
+        className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-primary shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors"
         aria-label="View Key Findings"
       >
-        <Lightbulb className="w-5 h-5 text-white" />
+        <Lightbulb className="w-5 h-5 text-primary-foreground" />
       </button>
 
       {/* Dialog popup */}
@@ -251,8 +278,8 @@ export function ExecutiveSummaryMobile() {
         <DialogContent className="max-w-[90vw] max-h-[80vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-blue-600 shadow-lg shadow-blue-600/20">
-                <Lightbulb className="w-4 h-4 text-white" />
+              <div className="p-2 rounded-xl bg-primary shadow-lg shadow-primary/20">
+                <Lightbulb className="w-4 h-4 text-primary-foreground" />
               </div>
               <span>Key Findings</span>
             </DialogTitle>
