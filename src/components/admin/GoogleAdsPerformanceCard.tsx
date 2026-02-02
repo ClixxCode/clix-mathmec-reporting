@@ -179,6 +179,12 @@ export function GoogleAdsPerformanceCard() {
               </CardDescription>
             </div>
           </div>
+          {analytics?.last_import && (
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <Clock className="w-3 h-3" />
+              {new Date(analytics.last_import).toLocaleDateString()}
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="pt-0 space-y-4">
@@ -256,11 +262,10 @@ export function GoogleAdsPerformanceCard() {
           </div>
         ) : analytics && analytics.total_records > 0 ? (
           <div className="space-y-2">
-            {analytics.last_import && (
-              <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
-                <Clock className="w-3 h-3" />
-                Last import: {new Date(analytics.last_import).toLocaleString()}
-              </div>
+            {analytics.date_range.earliest && analytics.date_range.latest && (
+              <p className="text-xs text-gray-500 mb-2">
+                Data: {analytics.date_range.earliest} to {analytics.date_range.latest}
+              </p>
             )}
             {analytics.date_range.earliest && analytics.date_range.latest && (
               <p className="text-xs text-gray-500 mb-2">

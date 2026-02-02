@@ -164,6 +164,12 @@ export function HubSpotContactsCard() {
               </CardDescription>
             </div>
           </div>
+          {analytics?.last_import && (
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <Clock className="w-3 h-3" />
+              {new Date(analytics.last_import).toLocaleDateString()}
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="pt-0 space-y-4">
@@ -241,12 +247,6 @@ export function HubSpotContactsCard() {
           </div>
         ) : analytics ? (
           <div className="space-y-2">
-            {analytics.last_import && (
-              <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
-                <Clock className="w-3 h-3" />
-                Last import: {new Date(analytics.last_import).toLocaleString()}
-              </div>
-            )}
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2 text-gray-600">
                 <Users className="w-4 h-4" />
