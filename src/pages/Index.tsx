@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { format } from "date-fns";
-import { MetricCard } from "@/components/dashboard/MetricCard";
+import { FunnelMetrics } from "@/components/dashboard/FunnelMetrics";
 import { QualityTrendsTable } from "@/components/dashboard/QualityTrendsTable";
 import { LocationPerformance } from "@/components/dashboard/LocationPerformance";
 import { DealsTable } from "@/components/dashboard/DealsTable";
@@ -8,8 +8,7 @@ import { ExecutiveSummaryDesktop, ExecutiveSummaryMobile } from "@/components/da
 import { Glossary } from "@/components/dashboard/Glossary";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { DashboardFiltersProvider, useDashboardFilters } from "@/hooks/use-dashboard-filters";
-import { useMonthlyMetrics } from "@/hooks/use-contact-analytics";
-import { DollarSign, Phone, Users, TrendingUp, Download, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import mathmecLogo from "@/assets/mathmec-logo.png";
 import html2pdf from "html2pdf.js";
@@ -18,7 +17,6 @@ function DashboardContent() {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { filters } = useDashboardFilters();
-  const { data: metrics, isLoading: metricsLoading } = useMonthlyMetrics();
 
   const handleDownloadPDF = async () => {
     if (!contentRef.current) return;
@@ -98,50 +96,9 @@ function DashboardContent() {
           <ExecutiveSummaryDesktop />
         </section>
 
-        {/* Key Metrics */}
+        {/* Funnel Metrics */}
         <section>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard
-              title="Total Spend"
-              value="$2,814"
-              subtitle="Paid Search budget"
-              icon={DollarSign}
-              variant="blue"
-            />
-            <MetricCard
-              title="Conversions"
-              value={metricsLoading ? "..." : metrics?.conversions || 0}
-              subtitle="Paid Search campaigns"
-              icon={Users}
-              variant="green"
-            />
-            <MetricCard
-              title="Paid Search Contacts"
-              value={metricsLoading ? "..." : metrics?.totalContacts || 0}
-              subtitle="Calls & Form Submissions"
-              icon={Phone}
-              variant="purple"
-            />
-            <MetricCard
-              title="Quality Rate"
-              value={metricsLoading ? "..." : (metrics?.avgQuality !== null ? metrics?.avgQuality : "—")}
-              subtitle="Contact Quality"
-              icon={TrendingUp}
-              variant="orange"
-              tooltipContent={
-                <div className="space-y-2 text-xs">
-                  <p className="font-semibold text-foreground">Quality Scoring Model (0-30 pts)</p>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li><span className="font-medium text-foreground">Service Relevance:</span> 0-8 pts</li>
-                    <li><span className="font-medium text-foreground">Project Specificity:</span> 0-7 pts</li>
-                    <li><span className="font-medium text-foreground">Commercial Intent:</span> 0-6 pts</li>
-                    <li><span className="font-medium text-foreground">Engagement Quality:</span> 0-5 pts</li>
-                    <li><span className="font-medium text-foreground">Conversion Indicators:</span> 0-7 pts</li>
-                  </ul>
-                </div>
-              }
-            />
-          </div>
+          <FunnelMetrics />
         </section>
 
         {/* Two Column Layout */}
