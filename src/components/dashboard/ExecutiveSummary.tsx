@@ -1,13 +1,14 @@
-import { Lightbulb, Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { Lightbulb, Loader2, RefreshCw, AlertCircle, Upload, FileText } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
+import { useToast } from "@/hooks/use-toast";
 
 function useExecutiveSummary() {
   const { filters } = useDashboardFilters();
@@ -38,12 +39,86 @@ function useExecutiveSummary() {
 
 function KeyFindingsContent() {
   const { data, isLoading, error, refetch, isFetching } = useExecutiveSummary();
+  const [uploadedContent, setUploadedContent] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+
+    try {
+      const fileName = file.name.toLowerCase();
+      
+      // Handle text-based files directly
+      if (fileName.endsWith('.txt') || fileName.endsWith('.md') || fileName.endsWith('.markdown')) {
+        const text = await file.text();
+        setUploadedContent(text);
+        toast({
+          title: "Document uploaded",
+          description: `Loaded content from ${file.name}`,
+        });
+      } else {
+        // For other file types, show a message
+        toast({
+          title: "Unsupported format",
+          description: "Please upload a .txt or .md file for now.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error("File upload error:", err);
+      toast({
+        title: "Upload failed",
+        description: "Could not read the file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const clearUploadedContent = () => {
+    setUploadedContent(null);
+  };
+
+  // Show uploaded content if available
+  if (uploadedContent) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <FileText className="w-4 h-4" />
+          <span>Uploaded document</span>
+        </div>
+        <div className="prose prose-sm max-w-none text-muted-foreground prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-strong:text-foreground">
+          <ReactMarkdown>{uploadedContent}</ReactMarkdown>
+        </div>
+        <div className="flex items-center justify-between pt-2 border-t border-border">
+          <span className="text-xs text-muted-foreground">Uploaded content</span>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={clearUploadedContent}
+            className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            Clear & use AI
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-5 h-5 animate-spin text-blue-600 mr-2" />
-        <span className="text-sm text-gray-600">Generating executive summary...</span>
+        <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
+        <span className="text-sm text-muted-foreground">Generating executive summary...</span>
       </div>
     );
   }
@@ -58,16 +133,35 @@ function KeyFindingsContent() {
             <p className="text-amber-600 mt-1">{error instanceof Error ? error.message : "Please try again"}</p>
           </div>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="gap-2"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-          Retry
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gap-2"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            Retry
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="gap-2"
+          >
+            <Upload className={`w-3.5 h-3.5 ${isUploading ? 'animate-pulse' : ''}`} />
+            Upload Document
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".txt,.md,.markdown"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+        </div>
       </div>
     );
   }
@@ -76,21 +170,40 @@ function KeyFindingsContent() {
 
   return (
     <div className="space-y-4">
-      <div className="prose prose-sm max-w-none text-gray-600 prose-headings:text-gray-900 prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-strong:text-gray-900">
+      <div className="prose prose-sm max-w-none text-muted-foreground prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-strong:text-foreground">
         <ReactMarkdown>{narrative}</ReactMarkdown>
       </div>
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-        <span className="text-xs text-gray-400">AI-generated summary</span>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="gap-1.5 text-xs text-gray-500 hover:text-gray-700"
-        >
-          <RefreshCw className={`w-3 h-3 ${isFetching ? 'animate-spin' : ''}`} />
-          Regenerate
-        </Button>
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <span className="text-xs text-muted-foreground">AI-generated summary</span>
+        <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Upload className="w-3 h-3" />
+            Upload
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className={`w-3 h-3 ${isFetching ? 'animate-spin' : ''}`} />
+            Regenerate
+          </Button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".txt,.md,.markdown"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
       </div>
     </div>
   );
