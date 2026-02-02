@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Briefcase, DollarSign, Calendar, User } from "lucide-react";
+import { Loader2, Briefcase } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DealsDialogProps {
@@ -82,7 +82,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
           </div>
         ) : (
           <ScrollArea className="h-[60vh] pr-4">
-            <div className="space-y-3">
+            <div className="space-y-2">
               {deals?.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">No deals found for this month</p>
               ) : (
@@ -92,47 +92,27 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
                   return (
                     <div
                       key={deal.id}
-                      className="p-4 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors bg-white"
+                      className="p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors bg-white flex items-center justify-between gap-4"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Briefcase className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium text-gray-900 truncate">
-                              {deal.deal_name || "Unnamed Deal"}
-                            </span>
-                            {deal.deal_stage && (
-                              <Badge variant="secondary" className={stageColor}>
-                                {deal.deal_stage}
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <DollarSign className="w-3.5 h-3.5 text-gray-400" />
-                              <span className="font-medium">{formatCurrency(deal.amount)}</span>
-                            </div>
-                            {deal.deal_owner && (
-                              <div className="flex items-center gap-2">
-                                <User className="w-3.5 h-3.5 text-gray-400" />
-                                <span className="truncate">{deal.deal_owner}</span>
-                              </div>
-                            )}
-                            {deal.close_date && (
-                              <div className="flex items-center gap-2">
-                                <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                                <span>Close: {new Date(deal.close_date).toLocaleDateString()}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="text-xs text-gray-400 whitespace-nowrap">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Briefcase className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span className="font-medium text-gray-900 truncate text-sm">
+                          {deal.deal_name || "Unnamed Deal"}
+                        </span>
+                        {deal.deal_stage && (
+                          <Badge variant="secondary" className={`${stageColor} text-xs flex-shrink-0`}>
+                            {deal.deal_stage}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-4 flex-shrink-0 text-sm">
+                        <span className="font-semibold text-gray-900">{formatCurrency(deal.amount)}</span>
+                        <span className="text-xs text-gray-400 w-20 text-right">
                           {deal.create_date 
-                            ? new Date(deal.create_date).toLocaleDateString()
+                            ? new Date(deal.create_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
                             : "—"}
-                        </div>
+                        </span>
                       </div>
                     </div>
                   );
