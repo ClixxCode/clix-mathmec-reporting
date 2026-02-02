@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.contact-analytics]
 verify_jwt = false
+
+[functions.import-ads-changes]
+verify_jwt = false
+
+[functions.generate-campaign-narrative]
+verify_jwt = false
