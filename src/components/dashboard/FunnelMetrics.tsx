@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useFunnelMetrics } from "@/hooks/use-funnel-metrics";
 import { useCTMCalls } from "@/hooks/use-ctm-calls";
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters";
+import { format } from "date-fns";
 import { ChevronRight, ChevronDown, Phone, FileText, Info, AlertCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Progress } from "@/components/ui/progress";
 import { ContactsDialog } from "./ContactsDialog";
 import { DealsDialog } from "./DealsDialog";
 
@@ -207,11 +207,8 @@ export function FunnelMetrics() {
   const [showContactsDialog, setShowContactsDialog] = useState(false);
   const [showDealsDialog, setShowDealsDialog] = useState(false);
 
-  // Format month for dialogs (e.g., "Jan 2026")
-  const currentMonth = new Date(filters.startDate).toLocaleDateString("en-US", {
-    month: "short",
-    year: "numeric",
-  });
+  // Format month for dialogs using the actual Date object (avoids timezone issues)
+  const currentMonth = format(filters.selectedMonth, "MMM yyyy");
 
   const formatCurrency = (value: number) => {
     if (value >= 1000) {
