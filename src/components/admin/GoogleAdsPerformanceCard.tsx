@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, TrendingUp, DollarSign, MousePointer, Eye, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, TrendingUp, DollarSign, MousePointer, Eye, RefreshCw, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ImportSummary {
@@ -20,6 +20,7 @@ interface PerformanceAnalytics {
   total_conversions: number;
   total_cost: number;
   date_range: { earliest: string | null; latest: string | null };
+  last_import: string | null;
 }
 
 export function GoogleAdsPerformanceCard() {
@@ -60,6 +61,13 @@ export function GoogleAdsPerformanceCard() {
         .order("date", { ascending: false })
         .limit(1);
 
+      // Get last import timestamp
+      const { data: lastImportData } = await supabase
+        .from("google_ads_performance")
+        .select("created_at")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
       return {
         total_records: totalRecords || 0,
         total_impressions: totalImpressions,
@@ -70,6 +78,7 @@ export function GoogleAdsPerformanceCard() {
           earliest: earliestData?.[0]?.date || null,
           latest: latestData?.[0]?.date || null,
         },
+        last_import: lastImportData?.[0]?.created_at || null,
       } as PerformanceAnalytics;
     },
   });
@@ -247,6 +256,12 @@ export function GoogleAdsPerformanceCard() {
           </div>
         ) : analytics && analytics.total_records > 0 ? (
           <div className="space-y-2">
+            {analytics.last_import && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                <Clock className="w-3 h-3" />
+                Last import: {new Date(analytics.last_import).toLocaleString()}
+              </div>
+            )}
             {analytics.date_range.earliest && analytics.date_range.latest && (
               <p className="text-xs text-gray-500 mb-2">
                 Data: {analytics.date_range.earliest} to {analytics.date_range.latest}

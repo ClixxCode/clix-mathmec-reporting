@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, Users, Search, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, Users, Search, RefreshCw, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ImportSummary {
@@ -19,6 +19,7 @@ interface AnalyticsData {
   paid_search_contacts: number;
   by_month?: { month: string; count: number; paid_search: number }[];
   by_source?: Record<string, number>;
+  last_import?: string;
 }
 
 export function HubSpotContactsCard() {
@@ -43,7 +44,19 @@ export function HubSpotContactsCard() {
       if (!response.ok) {
         throw new Error("Failed to fetch analytics");
       }
-      return response.json() as Promise<AnalyticsData>;
+      const data = await response.json();
+      
+      // Get last import timestamp
+      const { data: lastImportData } = await supabase
+        .from("hubspot_contacts")
+        .select("created_at")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      
+      return {
+        ...data,
+        last_import: lastImportData?.[0]?.created_at || null,
+      } as AnalyticsData;
     },
   });
 
@@ -228,6 +241,12 @@ export function HubSpotContactsCard() {
           </div>
         ) : analytics ? (
           <div className="space-y-2">
+            {analytics.last_import && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                <Clock className="w-3 h-3" />
+                Last import: {new Date(analytics.last_import).toLocaleString()}
+              </div>
+            )}
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2 text-gray-600">
                 <Users className="w-4 h-4" />
