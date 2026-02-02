@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import { FunnelMetrics } from "@/components/dashboard/FunnelMetrics";
 import { QualityTrendsTable } from "@/components/dashboard/QualityTrendsTable";
+import { CampaignPerformance } from "@/components/dashboard/CampaignPerformance";
 import { LocationPerformance } from "@/components/dashboard/LocationPerformance";
 import { ExecutiveSummaryDesktop, ExecutiveSummaryMobile } from "@/components/dashboard/ExecutiveSummary";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
@@ -94,6 +95,11 @@ function DashboardContent() {
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <QualityTrendsTable />
           <LocationPerformance />
+        </section>
+
+        {/* Campaign Performance */}
+        <section>
+          <CampaignPerformance />
         </section>
 
         {/* Key Findings - Below the table */}
