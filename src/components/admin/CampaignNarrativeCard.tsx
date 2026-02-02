@@ -196,7 +196,7 @@ export function CampaignNarrativeCard() {
               <CardTitle className="text-base flex items-center gap-2">
                 Campaign Management Insights
                 {changesCount && changesCount > 0 && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="outline" className="text-xs font-medium bg-muted text-muted-foreground border-border">
                     {changesCount.toLocaleString()} changes logged
                   </Badge>
                 )}
@@ -294,7 +294,8 @@ export function CampaignNarrativeCard() {
             <Button 
               onClick={handleGenerateNarrative} 
               disabled={isGenerating || !changesCount}
-              className="gap-2"
+              variant="default"
+              className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {isGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
