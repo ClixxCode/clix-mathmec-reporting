@@ -8,7 +8,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, User, Building, Mail, Phone, MessageSquare, PhoneCall } from "lucide-react";
+import { Loader2, User, Building, Mail, Phone, MessageSquare, PhoneCall, Target } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ContactsDialogProps {
@@ -28,6 +28,7 @@ interface Contact {
   quality_score: number | null;
   message: string | null;
   hubspot_create_date: string | null;
+  traffic_source_drill_down_1: string | null;
 }
 
 interface CTMCall {
@@ -74,7 +75,7 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
     queryFn: async (): Promise<Contact[]> => {
       const { data, error } = await supabase
         .from("hubspot_contacts")
-        .select("id, first_name, last_name, email, phone_number, company_name, lead_status, quality_score, message, hubspot_create_date")
+        .select("id, first_name, last_name, email, phone_number, company_name, lead_status, quality_score, message, hubspot_create_date, traffic_source_drill_down_1")
         .ilike("original_traffic_source", "Paid Search")
         .gte("hubspot_create_date", startDate.toISOString())
         .lte("hubspot_create_date", endDate.toISOString())
@@ -187,6 +188,14 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
                               <div className="flex items-center gap-2">
                                 <Phone className="w-3.5 h-3.5 text-gray-400" />
                                 <span>{contact.phone_number}</span>
+                              </div>
+                            )}
+                            {contact.traffic_source_drill_down_1 && (
+                              <div className="flex items-center gap-2">
+                                <Target className="w-3.5 h-3.5 text-blue-400" />
+                                <span className="text-blue-600 font-medium truncate">
+                                  {contact.traffic_source_drill_down_1}
+                                </span>
                               </div>
                             )}
                           </div>
