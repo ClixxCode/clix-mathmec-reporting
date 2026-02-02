@@ -139,7 +139,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
         ) : (
           <ScrollArea className="h-[60vh]">
             {/* Header row */}
-            <div className="grid grid-cols-[1fr_130px_90px_130px_70px] gap-3 px-4 py-3 text-xs font-semibold text-emerald-700 uppercase tracking-wide bg-emerald-50 border-b border-emerald-100 sticky top-0">
+            <div className="grid grid-cols-[1fr_130px_90px_130px_70px] gap-3 px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-white border-b border-[#e0e0e0] sticky top-0">
               <span>Deal</span>
               <span>Stage</span>
               <span className="text-right">Amount</span>
@@ -158,7 +158,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
                   return (
                     <div
                       key={deal.id}
-                      className={`grid grid-cols-[1fr_130px_90px_130px_70px] gap-3 px-4 py-3 hover:bg-blue-50 transition-colors items-center border-b border-gray-50 ${isEven ? "bg-white" : "bg-gray-50/50"}`}
+                      className={`grid grid-cols-[1fr_130px_90px_130px_70px] gap-3 px-4 py-3 hover:bg-gray-50 transition-colors items-center border-b border-[#f5f5f5] ${isEven ? "bg-white" : "bg-[#fafafa]"}`}
                     >
                       {/* Deal name - truncated */}
                       <div className="flex items-center gap-2 min-w-0">
