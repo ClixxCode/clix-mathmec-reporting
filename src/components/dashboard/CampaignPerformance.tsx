@@ -50,29 +50,29 @@ export function CampaignPerformance() {
               <TableHeader>
                 {/* Column group headers */}
                 <TableRow className="border-b-0 hover:bg-transparent">
-                  <TableHead className="pb-1" />
-                  <TableHead colSpan={5} className="text-center pb-1">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <TableHead className="pb-1 bg-transparent" />
+                  <TableHead colSpan={5} className="text-left pb-1 bg-gray-50">
+                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Google Ads Data
                     </span>
                   </TableHead>
-                  <TableHead colSpan={3} className="text-center pb-1 border-l border-gray-200">
-                    <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">
+                  <TableHead colSpan={3} className="text-left pb-1 bg-teal-50">
+                    <span className="text-xs font-semibold text-teal-700 uppercase tracking-wider">
                       HubSpot Data
                     </span>
                   </TableHead>
                 </TableRow>
                 {/* Column headers */}
-                <TableRow>
+                <TableRow className="bg-gray-100/50">
                   <TableHead className="min-w-[180px]">Campaign</TableHead>
                   <TableHead className="text-right">Spend</TableHead>
                   <TableHead className="text-right">Impr.</TableHead>
                   <TableHead className="text-right">Clicks</TableHead>
                   <TableHead className="text-right">Conv.</TableHead>
                   <TableHead className="text-right">Cost/Conv.</TableHead>
-                  <TableHead className="text-right border-l border-gray-200 text-teal-700">Contacts</TableHead>
-                  <TableHead className="text-right text-teal-700">Deals</TableHead>
-                  <TableHead className="text-right text-teal-700">Deal Value</TableHead>
+                  <TableHead className="text-right bg-teal-50/50 text-teal-700">Contacts</TableHead>
+                  <TableHead className="text-right bg-teal-50/50 text-teal-700">Deals</TableHead>
+                  <TableHead className="text-right bg-teal-50/50 text-teal-700">Deal Value</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -88,46 +88,46 @@ export function CampaignPerformance() {
                     <TableCell className="text-right">
                       {row.costPerConversion !== null ? formatCurrency(row.costPerConversion) : "—"}
                     </TableCell>
-                    <TableCell className="text-right border-l border-gray-200 font-medium text-teal-600">
+                    <TableCell className="text-right bg-teal-50/30 font-medium text-teal-600">
                       {row.contacts > 0 ? row.contacts : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium text-teal-600">
+                    <TableCell className="text-right bg-teal-50/30 font-medium text-teal-600">
                       {row.deals > 0 ? row.deals : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium text-teal-600">
+                    <TableCell className="text-right bg-teal-50/30 font-medium text-teal-600">
                       {row.dealValue > 0 ? formatCurrency(row.dealValue) : "—"}
                     </TableCell>
                   </TableRow>
                 ))}
                 {/* Totals row */}
-                <TableRow className="bg-gray-50 font-semibold border-t-2 border-gray-200">
-                  <TableCell>Total</TableCell>
-                  <TableCell className="text-right">
+                <TableRow className="font-semibold border-t-2 border-gray-200">
+                  <TableCell className="bg-gray-50">Total</TableCell>
+                  <TableCell className="text-right bg-gray-50">
                     {formatCurrency(data.reduce((sum, r) => sum + r.spend, 0))}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right bg-gray-50">
                     {formatNumber(data.reduce((sum, r) => sum + r.impressions, 0))}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right bg-gray-50">
                     {formatNumber(data.reduce((sum, r) => sum + r.clicks, 0))}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right bg-gray-50">
                     {formatNumber(data.reduce((sum, r) => sum + r.conversions, 0))}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right bg-gray-50">
                     {(() => {
                       const totalSpend = data.reduce((sum, r) => sum + r.spend, 0);
                       const totalConversions = data.reduce((sum, r) => sum + r.conversions, 0);
                       return totalConversions > 0 ? formatCurrency(totalSpend / totalConversions) : "—";
                     })()}
                   </TableCell>
-                  <TableCell className="text-right border-l border-gray-200 text-teal-600">
+                  <TableCell className="text-right bg-teal-50 text-teal-600">
                     {data.reduce((sum, r) => sum + r.contacts, 0)}
                   </TableCell>
-                  <TableCell className="text-right text-teal-600">
+                  <TableCell className="text-right bg-teal-50 text-teal-600">
                     {data.reduce((sum, r) => sum + r.deals, 0)}
                   </TableCell>
-                  <TableCell className="text-right text-teal-600">
+                  <TableCell className="text-right bg-teal-50 text-teal-600">
                     {formatCurrency(data.reduce((sum, r) => sum + r.dealValue, 0))}
                   </TableCell>
                 </TableRow>
