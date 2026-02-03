@@ -1,4 +1,4 @@
-import { ArrowLeft, Database, FileText, MapPin, TrendingUp } from "lucide-react";
+import { ArrowLeft, Database, FileText, Phone, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import mathmecLogo from "@/assets/mathmec-logo.png";
@@ -36,35 +36,19 @@ export default function Admin() {
       </header>
 
       <main className="container py-8 space-y-8">
-        {/* Google Ads Performance Section */}
+        {/* Google Ads Section */}
         <section>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-blue-100">
               <TrendingUp className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Advertising & Call Tracking</h2>
-              <p className="text-sm text-gray-500">Google Ads performance data and phone conversion attribution</p>
+              <h2 className="text-lg font-semibold text-gray-900">Google Ads Performance</h2>
+              <p className="text-sm text-gray-500">Campaign metrics and geographic conversion data</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <GoogleAdsPerformanceCard />
-            <CTMStatusCard />
-          </div>
-        </section>
-
-        {/* Google Ads Geo Section */}
-        <section>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-green-100">
-              <MapPin className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Geographic Performance</h2>
-              <p className="text-sm text-gray-500">Metro-level conversion data mapped to Mathews locations</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <GoogleAdsGeoCard />
           </div>
         </section>
@@ -83,6 +67,22 @@ export default function Admin() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <HubSpotContactsCard />
             <HubSpotDealsCard />
+          </div>
+        </section>
+
+        {/* Call Tracking Section */}
+        <section>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-teal-100">
+              <Phone className="w-5 h-5 text-teal-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Call Tracking</h2>
+              <p className="text-sm text-gray-500">Phone conversion attribution via CTM integration</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CTMStatusCard />
           </div>
         </section>
 
