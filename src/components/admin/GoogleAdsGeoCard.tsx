@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Upload, MapPin, RefreshCw, CheckCircle2, AlertCircle, Clock, Target } from "lucide-react";
+import { Upload, MapPin, RefreshCw, CheckCircle2, Clock, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { MetroMappingModal } from "./MetroMappingModal";
 
 interface LocationSummary {
   conversions: number;
@@ -21,6 +22,19 @@ interface ImportResult {
   imported: number;
   totalParsed: number;
   locationSummary: Record<string, LocationSummary>;
+}
+
+interface UnmappedMetro {
+  metro_area: string;
+  conversions: number;
+  cost: number;
+}
+
+interface ValidationResult {
+  success: false;
+  requiresMapping: true;
+  unmappedMetros: UnmappedMetro[];
+  totalParsed: number;
 }
 
 interface GeoAnalytics {
@@ -42,6 +56,12 @@ export function GoogleAdsGeoCard() {
   });
   const [lastImport, setLastImport] = useState<ImportResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Modal state for unmapped metros
+  const [showMappingModal, setShowMappingModal] = useState(false);
+  const [unmappedMetros, setUnmappedMetros] = useState<UnmappedMetro[]>([]);
+  const [pendingCsvContent, setPendingCsvContent] = useState<string | null>(null);
+  const [isSubmittingMappings, setIsSubmittingMappings] = useState(false);
 
   const { data: analytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = useQuery({
     queryKey: ["google-ads-geo-analytics"],
@@ -90,7 +110,7 @@ export function GoogleAdsGeoCard() {
     },
   });
 
-  const handleFileUpload = useCallback(async (file: File) => {
+  const handleFileUpload = useCallback(async (file: File, customMappings?: Record<string, string>) => {
     if (!file.name.endsWith(".csv")) {
       toast({
         title: "Invalid file type",
@@ -110,17 +130,36 @@ export function GoogleAdsGeoCard() {
       const text = await file.text();
       setUploadProgress(30);
 
+      // First call: validate only (unless we already have custom mappings)
+      const isValidationPass = !customMappings;
+      
       const { data, error } = await supabase.functions.invoke("import-google-ads-geo", {
-        body: { csvContent: text, reportMonth: reportMonthDate },
+        body: { 
+          csvContent: text, 
+          reportMonth: reportMonthDate,
+          customMappings,
+          validateOnly: isValidationPass,
+        },
       });
 
       setUploadProgress(80);
 
       if (error) throw error;
 
+      // Check if we need user to map metros
+      if (data.requiresMapping && data.unmappedMetros?.length > 0) {
+        setUnmappedMetros(data.unmappedMetros);
+        setPendingCsvContent(text);
+        setShowMappingModal(true);
+        setIsUploading(false);
+        setUploadProgress(0);
+        return;
+      }
+
       if (data.success) {
         setUploadProgress(100);
         setLastImport(data);
+        setPendingCsvContent(null);
 
         toast({
           title: "Import Complete",
@@ -143,6 +182,61 @@ export function GoogleAdsGeoCard() {
       setTimeout(() => setUploadProgress(0), 2000);
     }
   }, [reportMonth, toast, refetchAnalytics]);
+
+  const handleMappingConfirm = useCallback(async (mappings: Record<string, string>) => {
+    if (!pendingCsvContent) return;
+
+    setIsSubmittingMappings(true);
+    setShowMappingModal(false);
+
+    const [year, month] = reportMonth.split("-");
+    const reportMonthDate = `${year}-${month}-01`;
+
+    try {
+      setIsUploading(true);
+      setUploadProgress(50);
+
+      const { data, error } = await supabase.functions.invoke("import-google-ads-geo", {
+        body: { 
+          csvContent: pendingCsvContent, 
+          reportMonth: reportMonthDate,
+          customMappings: mappings,
+          validateOnly: false,
+        },
+      });
+
+      setUploadProgress(90);
+
+      if (error) throw error;
+
+      if (data.success) {
+        setUploadProgress(100);
+        setLastImport(data);
+        setPendingCsvContent(null);
+        setUnmappedMetros([]);
+
+        toast({
+          title: "Import Complete",
+          description: `Imported ${data.imported} geo records across ${Object.keys(data.locationSummary).length} locations`,
+        });
+
+        refetchAnalytics();
+      } else {
+        throw new Error(data.error || "Import failed");
+      }
+    } catch (error) {
+      console.error("Import with mappings error:", error);
+      toast({
+        title: "Import Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      setIsSubmittingMappings(false);
+      setTimeout(() => setUploadProgress(0), 2000);
+    }
+  }, [pendingCsvContent, reportMonth, toast, refetchAnalytics]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -325,6 +419,15 @@ export function GoogleAdsGeoCard() {
           SF Bay Area → Newark · Seattle-Tacoma → Seattle · Portland → Portland · Denver → Denver
         </p>
       </CardContent>
+
+      {/* Metro Mapping Modal */}
+      <MetroMappingModal
+        open={showMappingModal}
+        onOpenChange={setShowMappingModal}
+        unmappedMetros={unmappedMetros}
+        onConfirmMappings={handleMappingConfirm}
+        isSubmitting={isSubmittingMappings}
+      />
     </Card>
   );
 }
