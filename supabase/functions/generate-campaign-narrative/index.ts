@@ -347,7 +347,52 @@ serve(async (req) => {
       : 0;
 
     // ===============================
-    // 5. Build the AI Prompt
+    // 5. Fetch Google Ads Geo Performance
+    // ===============================
+    const reportMonthDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const { data: geoData, error: geoError } = await supabase
+      .from('google_ads_geo_performance')
+      .select('location, metro_area, conversions, cost, clicks, impressions')
+      .eq('report_month', reportMonthDate);
+
+    if (geoError) {
+      console.error('Error fetching geo performance:', geoError);
+    }
+    console.log(`Found ${geoData?.length || 0} geo performance records`);
+
+    // Aggregate geo data by location
+    const geoSummary = {
+      total_geo_conversions: 0,
+      total_geo_cost: 0,
+      by_location: {} as Record<string, { conversions: number; cost: number; clicks: number; impressions: number; cost_per_conversion: number }>
+    };
+
+    for (const row of geoData || []) {
+      const location = row.location || 'Unknown';
+      geoSummary.total_geo_conversions += Number(row.conversions) || 0;
+      geoSummary.total_geo_cost += Number(row.cost) || 0;
+
+      if (!geoSummary.by_location[location]) {
+        geoSummary.by_location[location] = { conversions: 0, cost: 0, clicks: 0, impressions: 0, cost_per_conversion: 0 };
+      }
+      geoSummary.by_location[location].conversions += Number(row.conversions) || 0;
+      geoSummary.by_location[location].cost += Number(row.cost) || 0;
+      geoSummary.by_location[location].clicks += Number(row.clicks) || 0;
+      geoSummary.by_location[location].impressions += Number(row.impressions) || 0;
+    }
+
+    // Calculate cost per conversion for each location
+    for (const location of Object.keys(geoSummary.by_location)) {
+      const loc = geoSummary.by_location[location];
+      loc.cost_per_conversion = loc.conversions > 0 ? loc.cost / loc.conversions : 0;
+    }
+
+    // Sort locations by conversions descending
+    const sortedLocations = Object.entries(geoSummary.by_location)
+      .sort((a, b) => b[1].conversions - a[1].conversions);
+
+    // ===============================
+    // 6. Build the AI Prompt
     // ===============================
     const monthName = startDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
     
@@ -377,10 +422,12 @@ CRITICAL FORMATTING RULES:
 
 Structure your narrative as:
 1. **Executive Summary** (2-3 sentences: headline metrics and what they mean)
+1. **Executive Summary** (2-3 sentences: headline metrics and what they mean)
 2. **Lead Generation** (contacts, quality scores, sources)
-3. **Revenue Impact** (deals won, pipeline, ROI on ad spend)
-4. **Campaign Management** (what was changed and why it mattered)
-5. **Looking Ahead** (brief action items as a numbered list)
+3. **Geographic Performance** (which locations are generating the best ROI)
+4. **Revenue Impact** (deals won, pipeline, ROI on ad spend)
+5. **Campaign Management** (what was changed and why it mattered)
+6. **Looking Ahead** (brief action items as a numbered list)
 
 DO NOT:
 - Use technical marketing jargon without explaining it
@@ -430,11 +477,21 @@ Most Active Campaigns: ${changeSummary.top_campaigns.map((c: any) => `${c.campai
 Notable Changes:
 ${changeSummary.notable_changes.map((c: any) => `- ${c.date}: ${c.campaign} - ${c.description}`).join('\n')}
 
+=== GEOGRAPHIC PERFORMANCE (By Mathews Location) ===
+Total Geo Conversions: ${geoSummary.total_geo_conversions}
+Total Geo Spend: $${geoSummary.total_geo_cost.toLocaleString()}
+
+Performance by Location:
+${sortedLocations.map(([loc, data]) => `- ${loc}: ${data.conversions} conversions, $${data.cost.toFixed(0)} spend, $${data.cost_per_conversion.toFixed(2)} cost/conv`).join('\n')}
+
+Best Performing Location: ${sortedLocations[0] ? `${sortedLocations[0][0]} with ${sortedLocations[0][1].conversions} conversions at $${sortedLocations[0][1].cost_per_conversion.toFixed(2)}/conversion` : 'N/A'}
+${sortedLocations.length > 1 ? `Highest Cost per Conversion: ${[...sortedLocations].sort((a, b) => b[1].cost_per_conversion - a[1].cost_per_conversion)[0][0]} at $${[...sortedLocations].sort((a, b) => b[1].cost_per_conversion - a[1].cost_per_conversion)[0][1].cost_per_conversion.toFixed(2)}` : ''}
+
 === CALCULATED METRICS ===
 Cost per Lead (Ad Spend / Paid Search Leads): $${contactSummary.paid_search_contacts > 0 ? (perfSummary.total_cost / contactSummary.paid_search_contacts).toFixed(2) : 'N/A'}
 ROAS (Revenue / Ad Spend): ${perfSummary.total_cost > 0 ? (dealSummary.total_revenue / perfSummary.total_cost).toFixed(2) : 'N/A'}x
 
-Write a cohesive executive summary that tells the story of this month's marketing performance. Connect the dots between ad spend, lead quality, and revenue outcomes. Be specific with numbers but explain what they mean for the business.`;
+Write a cohesive executive summary that tells the story of this month's marketing performance. Connect the dots between ad spend, lead quality, geographic performance, and revenue outcomes. Be specific with numbers but explain what they mean for the business. Include insights about which locations are performing best and any opportunities to optimize underperforming markets.`;
 
     const aiResult = await callLovableAI({
       lovableApiKey,
