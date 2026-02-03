@@ -5,17 +5,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Metro area to Mathews location mapping
-const METRO_TO_LOCATION: Record<string, string> = {
+// Default metro area to Mathews location mapping
+const DEFAULT_METRO_TO_LOCATION: Record<string, string> = {
   'san francisco-oakland-san jose ca': 'Newark',
   'seattle-tacoma wa': 'Seattle',
   'portland or': 'Portland',
   'denver co': 'Denver',
 };
 
-function mapMetroToLocation(metroArea: string): string {
+function mapMetroToLocation(metroArea: string, customMappings?: Record<string, string>): string {
   const normalized = metroArea.toLowerCase().trim();
-  return METRO_TO_LOCATION[normalized] || 'Unknown';
+  // Check custom mappings first (case-insensitive key match)
+  if (customMappings) {
+    const customKey = Object.keys(customMappings).find(k => k.toLowerCase().trim() === normalized);
+    if (customKey) return customMappings[customKey];
+  }
+  return DEFAULT_METRO_TO_LOCATION[normalized] || 'Unknown';
+}
+
+function isKnownMetro(metroArea: string, customMappings?: Record<string, string>): boolean {
+  const normalized = metroArea.toLowerCase().trim();
+  if (customMappings) {
+    const customKey = Object.keys(customMappings).find(k => k.toLowerCase().trim() === normalized);
+    if (customKey) return true;
+  }
+  return normalized in DEFAULT_METRO_TO_LOCATION;
 }
 
 Deno.serve(async (req) => {
@@ -29,7 +43,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { csvContent, reportMonth } = await req.json();
+    const { csvContent, reportMonth, customMappings, validateOnly } = await req.json();
     
     if (!csvContent) {
       return new Response(
@@ -178,7 +192,7 @@ Deno.serve(async (req) => {
       records.push({
         report_month: reportMonth,
         metro_area: metroArea,
-        location: mapMetroToLocation(metroArea),
+        location: mapMetroToLocation(metroArea, customMappings),
         region: values[colMap.region] || null,
         conversions,
         cost,
@@ -192,6 +206,44 @@ Deno.serve(async (req) => {
     }
 
     console.log('Parsed records:', records.length);
+
+    // Detect unmapped metros BEFORE deduplication for accurate stats
+    const unmappedMetrosMap = new Map<string, { conversions: number; cost: number }>();
+    records.forEach((record) => {
+      if (!isKnownMetro(record.metro_area, customMappings)) {
+        const existing = unmappedMetrosMap.get(record.metro_area);
+        if (existing) {
+          existing.conversions += record.conversions;
+          existing.cost += record.cost;
+        } else {
+          unmappedMetrosMap.set(record.metro_area, {
+            conversions: record.conversions,
+            cost: record.cost,
+          });
+        }
+      }
+    });
+
+    const unmappedMetros = Array.from(unmappedMetrosMap.entries()).map(([metro_area, stats]) => ({
+      metro_area,
+      conversions: stats.conversions,
+      cost: stats.cost,
+    }));
+
+    console.log('Unmapped metros:', unmappedMetros);
+
+    // If validateOnly mode, return unmapped metros without saving
+    if (validateOnly && unmappedMetros.length > 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          requiresMapping: true,
+          unmappedMetros,
+          totalParsed: records.length,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Deduplicate records by (report_month, metro_area, region) - aggregate duplicates
     const recordMap = new Map<string, typeof records[0]>();
