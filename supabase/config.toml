@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.parse-document]
 verify_jwt = false
+
+[functions.import-google-ads-performance]
+verify_jwt = false
+
+[functions.import-google-ads-geo]
+verify_jwt = false
+
+[functions.fetch-ctm-account]
+verify_jwt = false

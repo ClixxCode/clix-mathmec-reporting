@@ -1,4 +1,4 @@
-import { ArrowLeft, Database, FileText, Phone, TrendingUp } from "lucide-react";
+import { ArrowLeft, Database, FileText, MapPin, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import mathmecLogo from "@/assets/mathmec-logo.png";
@@ -7,6 +7,7 @@ import { HubSpotDealsCard } from "@/components/admin/HubSpotDealsCard";
 import { CampaignNarrativeCard } from "@/components/admin/CampaignNarrativeCard";
 import { CTMStatusCard } from "@/components/admin/CTMStatusCard";
 import { GoogleAdsPerformanceCard } from "@/components/admin/GoogleAdsPerformanceCard";
+import { GoogleAdsGeoCard } from "@/components/admin/GoogleAdsGeoCard";
 
 export default function Admin() {
   return (
@@ -35,7 +36,7 @@ export default function Admin() {
       </header>
 
       <main className="container py-8 space-y-8">
-        {/* Google Ads & Call Tracking Section */}
+        {/* Google Ads Performance Section */}
         <section>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-lg bg-blue-100">
@@ -49,6 +50,22 @@ export default function Admin() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <GoogleAdsPerformanceCard />
             <CTMStatusCard />
+          </div>
+        </section>
+
+        {/* Google Ads Geo Section */}
+        <section>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-green-100">
+              <MapPin className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Geographic Performance</h2>
+              <p className="text-sm text-gray-500">Metro-level conversion data mapped to Mathews locations</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <GoogleAdsGeoCard />
           </div>
         </section>
 

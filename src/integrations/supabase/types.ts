@@ -194,6 +194,57 @@ export type Database = {
         }
         Relationships: []
       }
+      google_ads_geo_performance: {
+        Row: {
+          clicks: number
+          conversions: number
+          cost: number
+          cost_per_conversion: number | null
+          created_at: string
+          ctr: number | null
+          currency_code: string | null
+          id: string
+          impressions: number
+          location: string
+          metro_area: string
+          raw_data: Json | null
+          region: string | null
+          report_month: string
+        }
+        Insert: {
+          clicks?: number
+          conversions?: number
+          cost?: number
+          cost_per_conversion?: number | null
+          created_at?: string
+          ctr?: number | null
+          currency_code?: string | null
+          id?: string
+          impressions?: number
+          location: string
+          metro_area: string
+          raw_data?: Json | null
+          region?: string | null
+          report_month: string
+        }
+        Update: {
+          clicks?: number
+          conversions?: number
+          cost?: number
+          cost_per_conversion?: number | null
+          created_at?: string
+          ctr?: number | null
+          currency_code?: string | null
+          id?: string
+          impressions?: number
+          location?: string
+          metro_area?: string
+          raw_data?: Json | null
+          region?: string | null
+          report_month?: string
+        }
+        Relationships: []
+      }
       google_ads_performance: {
         Row: {
           avg_cpc: number | null
