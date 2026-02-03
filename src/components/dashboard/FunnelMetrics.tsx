@@ -167,39 +167,39 @@ function ConversionBreakdown({ formConversions, callConversions, googleConversio
 
   return (
     <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-      <div className="mt-3 bg-white rounded-lg p-4 border border-blue-100">
-        <div className="grid grid-cols-2 gap-4 mb-3">
+      <div className="mt-3 bg-white rounded-lg p-4 border border-blue-100 max-w-md">
+        <div className="flex gap-3 mb-3">
           <button 
             onClick={onFormsClick}
-            className="flex items-center justify-between gap-3 p-2 -m-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer text-left group"
+            className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 hover:border-blue-300 transition-all cursor-pointer text-left group flex-1"
           >
-            <div className="flex items-center gap-3">
-              <FileText className="w-5 h-5 text-blue-500" />
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-blue-600" />
               <div>
-                <p className="text-xl font-bold text-gray-900">{isLoading ? "..." : formConversions}</p>
-                <p className="text-xs text-gray-500">Forms (HubSpot)</p>
+                <p className="text-lg font-bold text-gray-900">{isLoading ? "..." : formConversions}</p>
+                <p className="text-xs text-gray-500">Forms</p>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition-colors" />
+            <ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600 transition-colors" />
           </button>
           <button 
             onClick={onCallsClick}
-            className="flex items-center justify-between gap-3 p-2 -m-2 rounded-lg hover:bg-amber-50 transition-colors cursor-pointer text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-300 transition-all cursor-pointer text-left group flex-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-amber-50 disabled:hover:border-amber-200"
             disabled={callConversions === 0}
           >
-            <div className="flex items-center gap-3">
-              <Phone className="w-5 h-5 text-amber-500" />
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4 text-amber-600" />
               <div>
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-lg font-bold text-gray-900">
                   {isLoading ? "..." : (callConversions > 0 ? callConversions : "—")}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {callConversions > 0 ? "Calls (CTM)" : "Calls (connect CTM)"}
+                  {callConversions > 0 ? "Calls" : "No CTM"}
                 </p>
               </div>
             </div>
             {callConversions > 0 && (
-              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-amber-500 transition-colors" />
+              <ChevronRight className="w-4 h-4 text-amber-400 group-hover:text-amber-600 transition-colors" />
             )}
           </button>
         </div>
