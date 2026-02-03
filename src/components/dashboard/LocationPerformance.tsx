@@ -40,7 +40,7 @@ export function LocationPerformance() {
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <span className="text-gray-500">${loc.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  <span className="font-semibold text-blue-600">{loc.conversions} conv.</span>
+                  <span className="font-semibold text-blue-600">{Math.round(loc.conversions)} conv.</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
