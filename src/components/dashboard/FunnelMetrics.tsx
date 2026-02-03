@@ -167,7 +167,7 @@ function ConversionBreakdown({ formConversions, callConversions, googleConversio
 
   return (
     <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-      <div className="mt-3 bg-white rounded-lg p-4 border border-blue-100 max-w-md">
+      <div className="mt-3 bg-white rounded-lg p-4 border border-blue-100 max-w-md ml-auto">
         <div className="flex gap-3 mb-3">
           <button 
             onClick={onFormsClick}
