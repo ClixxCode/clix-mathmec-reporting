@@ -185,15 +185,27 @@ function ConversionBreakdown({ formConversions, callConversions, googleConversio
           </div>
         </div>
 
-        {hasGap && (
-          <p className="text-xs text-gray-500 leading-relaxed border-t border-gray-100 pt-3">
-            <span className="font-medium">{totalTracked} tracked vs. {googleConversions} Google conversions.</span>{" "}
-            {trackedHigher 
-              ? "CTM captures repeat callers and click-to-call ads that may not trigger Google's pixel."
-              : "Some conversions may not result in CRM records due to abandoned forms or spam filtering."
-            }
-          </p>
-        )}
+        {/* Attribution context */}
+        <div className="text-xs text-gray-500 leading-relaxed border-t border-gray-100 pt-3 space-y-2">
+          {hasGap && (
+            <p>
+              <span className="font-medium">{totalTracked} tracked vs. {googleConversions} Google conversions.</span>{" "}
+              {trackedHigher 
+                ? "CTM captures repeat callers and click-to-call ads that may not trigger Google's pixel."
+                : "Some conversions may not result in CRM records due to abandoned forms or spam filtering."
+              }
+            </p>
+          )}
+          <div className="flex items-start gap-2 bg-blue-50 rounded p-2 -mx-1">
+            <AlertCircle className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+            <p className="text-blue-700">
+              <span className="font-medium">Why numbers may differ:</span> Google counts pixel fires (every form submit), 
+              while HubSpot counts <em>contacts created</em>. Repeat visitors submitting new forms trigger Google's pixel 
+              but update their existing HubSpot contact instead of creating a new one. 
+              <span className="font-medium"> Deals are the north star metric</span> since each represents a distinct opportunity.
+            </p>
+          </div>
+        </div>
       </div>
     </CollapsibleContent>
   );
