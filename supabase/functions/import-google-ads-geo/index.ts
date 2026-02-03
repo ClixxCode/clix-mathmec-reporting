@@ -192,17 +192,42 @@ Deno.serve(async (req) => {
     }
 
     console.log('Parsed records:', records.length);
-    if (records.length > 0) {
-      console.log('Sample record:', records[0]);
+
+    // Deduplicate records by (report_month, metro_area, region) - aggregate duplicates
+    const recordMap = new Map<string, typeof records[0]>();
+    records.forEach((record) => {
+      const key = `${record.report_month}|${record.metro_area}|${record.region || ''}`;
+      const existing = recordMap.get(key);
+      
+      if (existing) {
+        // Aggregate numeric fields
+        existing.conversions += record.conversions;
+        existing.cost += record.cost;
+        existing.clicks += record.clicks;
+        existing.impressions += record.impressions;
+        // Recalculate cost_per_conversion
+        existing.cost_per_conversion = existing.conversions > 0 
+          ? existing.cost / existing.conversions 
+          : null;
+      } else {
+        recordMap.set(key, { ...record });
+      }
+    });
+
+    const dedupedRecords = Array.from(recordMap.values());
+    console.log('Deduplicated records:', dedupedRecords.length);
+
+    if (dedupedRecords.length > 0) {
+      console.log('Sample record:', dedupedRecords[0]);
       console.log('Location mapping summary:', 
-        records.reduce((acc, r) => {
+        dedupedRecords.reduce((acc, r) => {
           acc[r.location] = (acc[r.location] || 0) + 1;
           return acc;
         }, {} as Record<string, number>)
       );
     }
 
-    if (records.length === 0) {
+    if (dedupedRecords.length === 0) {
       return new Response(
         JSON.stringify({ error: 'No valid data rows found in CSV' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -212,7 +237,7 @@ Deno.serve(async (req) => {
     // Upsert records
     const { data, error } = await supabase
       .from('google_ads_geo_performance')
-      .upsert(records, { 
+      .upsert(dedupedRecords, { 
         onConflict: 'report_month,metro_area,region',
         ignoreDuplicates: false 
       })
@@ -227,7 +252,7 @@ Deno.serve(async (req) => {
     }
 
     // Aggregate by location for summary
-    const locationSummary = records.reduce((acc, r) => {
+    const locationSummary = dedupedRecords.reduce((acc, r) => {
       if (!acc[r.location]) {
         acc[r.location] = { conversions: 0, cost: 0, clicks: 0, impressions: 0 };
       }
@@ -240,7 +265,7 @@ Deno.serve(async (req) => {
 
     const result = {
       success: true,
-      imported: data?.length || records.length,
+      imported: data?.length || dedupedRecords.length,
       totalParsed: records.length,
       locationSummary,
     };
