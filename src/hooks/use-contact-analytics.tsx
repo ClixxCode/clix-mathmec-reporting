@@ -73,8 +73,10 @@ export function useMonthlyMetrics() {
 export interface QualityTrendRow {
   month: string;
   totalContacts: number;
-  avgQuality: number;
-  paidSearchContacts: number;
+  qualificationRate: number;
+  unqualifiedCount: number;
+  reviewedCount: number;
+  dataQualityWarning: boolean;
 }
 
 export function useQualityTrends() {
@@ -84,7 +86,7 @@ export function useQualityTrends() {
       // Get only Paid Search contacts grouped by month
       const { data: contacts, error } = await supabase
         .from("hubspot_contacts")
-        .select("hubspot_create_date, quality_score, original_traffic_source")
+        .select("hubspot_create_date, lead_status, original_traffic_source")
         .ilike("original_traffic_source", "Paid Search")
         .not("hubspot_create_date", "is", null)
         .order("hubspot_create_date", { ascending: false });
@@ -94,8 +96,8 @@ export function useQualityTrends() {
       // Group by month
       const monthlyData: Record<string, { 
         count: number; 
-        paidSearch: number;
-        qualityScores: number[] 
+        unqualifiedCount: number;
+        reviewedCount: number;
       }> = {};
 
       contacts?.forEach((contact) => {
@@ -105,30 +107,43 @@ export function useQualityTrends() {
         const monthKey = `${date.toLocaleString("default", { month: "short" })} ${date.getFullYear()}`;
 
         if (!monthlyData[monthKey]) {
-          monthlyData[monthKey] = { count: 0, paidSearch: 0, qualityScores: [] };
+          monthlyData[monthKey] = { count: 0, unqualifiedCount: 0, reviewedCount: 0 };
         }
 
         monthlyData[monthKey].count++;
         
-        if (contact.original_traffic_source?.toLowerCase() === "paid search") {
-          monthlyData[monthKey].paidSearch++;
-        }
-
-        if (contact.quality_score !== null) {
-          monthlyData[monthKey].qualityScores.push(contact.quality_score);
+        // Track lead status
+        const status = contact.lead_status?.toLowerCase();
+        if (status) {
+          monthlyData[monthKey].reviewedCount++;
+          if (status === "unqualified") {
+            monthlyData[monthKey].unqualifiedCount++;
+          }
         }
       });
 
       // Convert to array and sort by date (most recent first)
       const result = Object.entries(monthlyData)
-        .map(([month, data]) => ({
-          month,
-          totalContacts: data.count,
-          paidSearchContacts: data.paidSearch,
-          avgQuality: data.qualityScores.length > 0
-            ? Math.round((data.qualityScores.reduce((a, b) => a + b, 0) / data.qualityScores.length) * 10) / 10
-            : 0,
-        }))
+        .map(([month, data]) => {
+          // Qualification rate: (Total - Unqualified) / Total * 100
+          const qualificationRate = data.count > 0
+            ? Math.round(((data.count - data.unqualifiedCount) / data.count) * 100)
+            : 100;
+          
+          // Warning if more than 50% of contacts have no lead_status
+          const unreviewedPercent = data.count > 0 
+            ? ((data.count - data.reviewedCount) / data.count) * 100 
+            : 0;
+          
+          return {
+            month,
+            totalContacts: data.count,
+            qualificationRate,
+            unqualifiedCount: data.unqualifiedCount,
+            reviewedCount: data.reviewedCount,
+            dataQualityWarning: unreviewedPercent > 50,
+          };
+        })
         .sort((a, b) => {
           const dateA = new Date(a.month);
           const dateB = new Date(b.month);

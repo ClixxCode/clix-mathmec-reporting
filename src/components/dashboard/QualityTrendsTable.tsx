@@ -1,20 +1,20 @@
 import { useState, useMemo } from "react";
 import { useQualityTrends, QualityTrendRow } from "@/hooks/use-contact-analytics";
-import { TrendingUp, TrendingDown, ArrowUp, ArrowDown, ArrowUpDown, Loader2, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowUp, ArrowDown, ArrowUpDown, Loader2, Info, AlertTriangle } from "lucide-react";
 import { ContactsDialog } from "./ContactsDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-type SortKey = "month" | "totalContacts" | "avgQuality";
+type SortKey = "month" | "totalContacts" | "qualificationRate";
 type SortDirection = "asc" | "desc";
 
-const qualityScoringInfo = `Quality Score (0-30 points):
-• Service Relevance (0-8): Matches to fabrication, maintenance, material handling
-• Project Specificity (0-7): Dimensions, materials, quantities, drawings
-• Commercial Intent (0-6): Quote requests, urgency, budget, RFQ language
-• Engagement Quality (0-5): Call duration, message detail, referrals
-• Conversion Indicators (0-4): Timeline, urgency signals
+const qualificationInfo = `Qualification Rate:
+• Percentage of contacts NOT marked as "Unqualified"
+• Formula: (Total - Unqualified) / Total × 100
+• Higher is better
 
-High Quality: 20+ points | Low Quality: <10 points`;
+Data Quality Warning (⚠️):
+• Shown when >50% of contacts lack a lead status
+• Indicates sales team needs to review more leads`;
 
 export function QualityTrendsTable() {
   const { data: qualityTrends, isLoading, error } = useQualityTrends();
@@ -85,7 +85,7 @@ export function QualityTrendsTable() {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs text-xs whitespace-pre-line">
-                <p>{qualityScoringInfo}</p>
+                <p>{qualificationInfo}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -95,12 +95,12 @@ export function QualityTrendsTable() {
     </th>
   );
 
-  // Get trend based on the sorted data position
+  // Get trend based on comparing to previous month
   const getTrend = (row: QualityTrendRow, index: number) => {
     if (!qualityTrends || index >= qualityTrends.length - 1) return true;
     const originalIndex = qualityTrends.findIndex((r) => r.month === row.month);
-    const prevAvg = originalIndex > 0 ? qualityTrends[originalIndex - 1].avgQuality : row.avgQuality;
-    return row.avgQuality >= prevAvg;
+    const prevRate = originalIndex > 0 ? qualityTrends[originalIndex - 1].qualificationRate : row.qualificationRate;
+    return row.qualificationRate >= prevRate;
   };
 
   if (isLoading) {
@@ -134,7 +134,7 @@ export function QualityTrendsTable() {
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="px-6 py-5 border-b border-gray-100">
         <h3 className="text-lg font-semibold text-gray-900">Paid Search Contact Trends</h3>
-        <p className="text-sm text-gray-500 mt-1">Monthly breakdown of paid search contacts</p>
+        <p className="text-sm text-gray-500 mt-1">Monthly breakdown of paid search contacts & qualification rates</p>
       </div>
       <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
         <table className="w-full">
@@ -146,8 +146,8 @@ export function QualityTrendsTable() {
               <SortableHeader column="totalContacts" className="text-right">
                 Total Contacts
               </SortableHeader>
-              <SortableHeader column="avgQuality" className="text-right" showInfo>
-                Avg Quality
+              <SortableHeader column="qualificationRate" className="text-right" showInfo>
+                Qualification Rate
               </SortableHeader>
               <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
                 Trend
@@ -164,27 +164,54 @@ export function QualityTrendsTable() {
                   className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                   onClick={() => setSelectedMonth(row.month)}
                 >
-                  <td className="px-4 py-4 font-medium text-gray-900">{row.month}</td>
+                  <td className="px-4 py-4 font-medium text-gray-900">
+                    <div className="flex items-center gap-2">
+                      {row.month}
+                      {row.dataQualityWarning && (
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertTriangle className="w-4 h-4 text-amber-500" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs text-xs">
+                              <p>
+                                {row.reviewedCount} of {row.totalContacts} contacts have a lead status set.
+                                <br />
+                                Consider reviewing the remaining {row.totalContacts - row.reviewedCount} contacts.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-4 text-right">
                     <span className="inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
                       {row.totalContacts}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-right font-semibold text-gray-900">
-                    {row.avgQuality > 0 ? row.avgQuality.toFixed(1) : "—"}
+                  <td className="px-4 py-4 text-right">
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className={`font-semibold ${row.qualificationRate >= 80 ? 'text-emerald-600' : row.qualificationRate >= 60 ? 'text-gray-900' : 'text-amber-600'}`}>
+                            {row.qualificationRate}%
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="text-xs">
+                          <p>{row.unqualifiedCount} unqualified of {row.totalContacts} total</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </td>
                   <td className="px-4 py-4 text-center">
-                    {row.avgQuality > 0 ? (
-                      <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${isUp ? 'bg-emerald-50' : 'bg-red-50'}`}>
-                        {isUp ? (
-                          <TrendingUp className="w-4 h-4 text-emerald-600" />
-                        ) : (
-                          <TrendingDown className="w-4 h-4 text-red-500" />
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
+                    <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${isUp ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                      {isUp ? (
+                        <TrendingUp className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <TrendingDown className="w-4 h-4 text-red-500" />
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
