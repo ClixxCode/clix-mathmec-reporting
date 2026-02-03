@@ -8,6 +8,8 @@ const corsHeaders = {
 // Default metro area to Mathews location mapping
 const DEFAULT_METRO_TO_LOCATION: Record<string, string> = {
   'san francisco-oakland-san jose ca': 'Newark',
+  'sacramento-stockton-modesto ca': 'Newark',
+  'monterey-salinas ca': 'Newark',
   'seattle-tacoma wa': 'Seattle',
   'portland or': 'Portland',
   'denver co': 'Denver',
