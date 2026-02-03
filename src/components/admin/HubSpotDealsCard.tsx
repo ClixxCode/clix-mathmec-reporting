@@ -169,7 +169,7 @@ export function HubSpotDealsCard() {
             <div>
               <CardTitle className="text-base">HubSpot Deals</CardTitle>
               <CardDescription className="mt-1">
-                Import deals with direct contact linkage via Associated Contact IDs
+                Import deals with all properties (includes Associated Contact ID for linking)
               </CardDescription>
             </div>
           </div>
