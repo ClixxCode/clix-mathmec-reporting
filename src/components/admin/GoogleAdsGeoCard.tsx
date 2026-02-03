@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, MapPin, RefreshCw, CheckCircle2, Clock, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MetroMappingModal } from "./MetroMappingModal";
+import { UploadConfirmDialog } from "./UploadConfirmDialog";
 
 interface LocationSummary {
   conversions: number;
@@ -62,6 +63,10 @@ export function GoogleAdsGeoCard() {
   const [unmappedMetros, setUnmappedMetros] = useState<UnmappedMetro[]>([]);
   const [pendingCsvContent, setPendingCsvContent] = useState<string | null>(null);
   const [isSubmittingMappings, setIsSubmittingMappings] = useState(false);
+  
+  // Confirmation dialog state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const pendingFileRef = useRef<File | null>(null);
 
   const { data: analytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = useQuery({
     queryKey: ["google-ads-geo-analytics"],
@@ -254,16 +259,43 @@ export function GoogleAdsGeoCard() {
     
     const file = e.dataTransfer.files[0];
     if (file) {
-      handleFileUpload(file);
+      if (!file.name.endsWith(".csv")) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a CSV file",
+          variant: "destructive",
+        });
+        return;
+      }
+      pendingFileRef.current = file;
+      setShowConfirmDialog(true);
     }
-  }, [handleFileUpload]);
+  }, [toast]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleFileUpload(file);
+      if (!file.name.endsWith(".csv")) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a CSV file",
+          variant: "destructive",
+        });
+        e.target.value = "";
+        return;
+      }
+      pendingFileRef.current = file;
+      setShowConfirmDialog(true);
     }
     e.target.value = "";
+  }, [toast]);
+
+  const handleConfirmUpload = useCallback(() => {
+    setShowConfirmDialog(false);
+    if (pendingFileRef.current) {
+      handleFileUpload(pendingFileRef.current);
+      pendingFileRef.current = null;
+    }
   }, [handleFileUpload]);
 
   return (
@@ -419,6 +451,15 @@ export function GoogleAdsGeoCard() {
           SF Bay Area → Newark · Seattle-Tacoma → Seattle · Portland → Portland · Denver → Denver
         </p>
       </CardContent>
+
+      {/* Upload Confirmation Dialog */}
+      <UploadConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        fileName={pendingFileRef.current?.name || ""}
+        reportMonth={reportMonth}
+        onConfirm={handleConfirmUpload}
+      />
 
       {/* Metro Mapping Modal */}
       <MetroMappingModal
