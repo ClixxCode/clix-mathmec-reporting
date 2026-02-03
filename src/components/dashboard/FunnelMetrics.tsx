@@ -8,6 +8,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ContactsDialog } from "./ContactsDialog";
 import { DealsDialog } from "./DealsDialog";
+import { FormsDialog } from "./FormsDialog";
+import { CallsDialog } from "./CallsDialog";
 
 // Metric definitions for info tooltips
 const metricDefinitions: Record<string, string> = {
@@ -153,9 +155,11 @@ interface ConversionBreakdownProps {
   callConversions: number;
   googleConversions: number;
   isLoading?: boolean;
+  onFormsClick: () => void;
+  onCallsClick: () => void;
 }
 
-function ConversionBreakdown({ formConversions, callConversions, googleConversions, isLoading }: ConversionBreakdownProps) {
+function ConversionBreakdown({ formConversions, callConversions, googleConversions, isLoading, onFormsClick, onCallsClick }: ConversionBreakdownProps) {
   const totalTracked = formConversions + callConversions;
   const gap = totalTracked - googleConversions;
   const hasGap = Math.abs(gap) > 0;
@@ -165,14 +169,21 @@ function ConversionBreakdown({ formConversions, callConversions, googleConversio
     <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
       <div className="mt-3 bg-white rounded-lg p-4 border border-blue-100">
         <div className="grid grid-cols-2 gap-4 mb-3">
-          <div className="flex items-center gap-3">
+          <button 
+            onClick={onFormsClick}
+            className="flex items-center gap-3 p-2 -m-2 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer text-left"
+          >
             <FileText className="w-5 h-5 text-blue-500" />
             <div>
               <p className="text-xl font-bold text-gray-900">{isLoading ? "..." : formConversions}</p>
               <p className="text-xs text-gray-500">Forms (HubSpot)</p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
+          </button>
+          <button 
+            onClick={onCallsClick}
+            className="flex items-center gap-3 p-2 -m-2 rounded-lg hover:bg-amber-50 transition-colors cursor-pointer text-left"
+            disabled={callConversions === 0}
+          >
             <Phone className="w-5 h-5 text-amber-500" />
             <div>
               <p className="text-xl font-bold text-gray-900">
@@ -182,7 +193,7 @@ function ConversionBreakdown({ formConversions, callConversions, googleConversio
                 {callConversions > 0 ? "Calls (CTM)" : "Calls (connect CTM)"}
               </p>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Attribution context */}
@@ -218,6 +229,8 @@ export function FunnelMetrics() {
   const [showConversionBreakdown, setShowConversionBreakdown] = useState(false);
   const [showContactsDialog, setShowContactsDialog] = useState(false);
   const [showDealsDialog, setShowDealsDialog] = useState(false);
+  const [showFormsDialog, setShowFormsDialog] = useState(false);
+  const [showCallsDialog, setShowCallsDialog] = useState(false);
 
   // Format month for dialogs using the actual Date object (avoids timezone issues)
   const currentMonth = format(filters.selectedMonth, "MMM yyyy");
@@ -297,6 +310,8 @@ export function FunnelMetrics() {
             callConversions={callConversions}
             googleConversions={metrics.conversions}
             isLoading={ctmLoading || metrics.isLoading}
+            onFormsClick={() => setShowFormsDialog(true)}
+            onCallsClick={() => setShowCallsDialog(true)}
           />
         </div>
       </Collapsible>
@@ -355,6 +370,16 @@ export function FunnelMetrics() {
       <DealsDialog
         open={showDealsDialog}
         onOpenChange={setShowDealsDialog}
+        month={currentMonth}
+      />
+      <FormsDialog
+        open={showFormsDialog}
+        onOpenChange={setShowFormsDialog}
+        month={currentMonth}
+      />
+      <CallsDialog
+        open={showCallsDialog}
+        onOpenChange={setShowCallsDialog}
         month={currentMonth}
       />
     </div>
