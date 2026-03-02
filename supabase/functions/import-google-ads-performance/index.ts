@@ -5,6 +5,25 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+function parseCSVLine(line: string, delimiter: string): string[] {
+  const fields: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === delimiter && !inQuotes) {
+      fields.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -63,7 +82,7 @@ Deno.serve(async (req) => {
     const delimiter = tabCount > commaCount ? '\t' : ',';
     console.log('Detected delimiter:', delimiter === '\t' ? 'TAB' : 'COMMA');
     
-    const headers = headerLine.split(delimiter).map((h: string) => h.trim().toLowerCase());
+    const headers = parseCSVLine(headerLine, delimiter).map((h: string) => h.trim().toLowerCase());
     console.log('Headers:', headers);
 
     // Map column indices
@@ -101,7 +120,7 @@ Deno.serve(async (req) => {
       const line = lines[i].trim();
       if (!line) continue;
 
-      const values = line.split(delimiter).map((v: string) => v.trim());
+      const values = parseCSVLine(line, delimiter);
       
       const dateVal = values[colMap.date] || '';
       const campaignVal = values[colMap.campaign] || '';
