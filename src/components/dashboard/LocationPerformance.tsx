@@ -1,6 +1,7 @@
 import { useLocationPerformance } from "@/hooks/use-location-performance";
 import { locationPerformance as staticLocationPerformance } from "@/data/deals";
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters";
 import { format } from "date-fns";
 
@@ -22,7 +23,19 @@ export function LocationPerformance() {
             <h3 className="text-lg font-semibold text-gray-900">Performance by Location</h3>
             <p className="text-sm text-gray-500 mt-1">{monthLabel} spend allocation & results</p>
           </div>
-          {isLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 transition-colors" />
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-xs text-xs">
+                  <p>Geographic conversions may exceed campaign totals. Google Ads distributes fractional conversion credit across overlapping regions (e.g., a Bay Area conversion may count under San Francisco Bay Area, Silicon Valley, and California separately).</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+          </div>
         </div>
       </div>
       <div className="p-6 space-y-5">
