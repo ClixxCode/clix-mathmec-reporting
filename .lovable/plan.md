@@ -1,87 +1,36 @@
 
 
-# Conversion Breakdown Enhancement & Interactive Cards
+# Fix CSV Parser for Quoted Fields with Commas
 
-## Understanding the Data Gap
+## Problem
+The Google Ads CSV import splits lines by comma naively. Values like `"1,181"` (quoted numbers with commas) get split incorrectly, shifting columns and causing cost to be recorded as $0 for affected rows. This accounts for the $161.19 discrepancy.
 
-You're right - the numbers are:
-- **Google Ads Conversions**: 40 (pixel-tracked intent signals)
-- **Forms (HubSpot)**: 18 Paid Search contacts with "Form Submission" as incoming source
-- **Calls (CTM)**: 36 Google Ads-attributed calls
-- **Total Forms + Calls**: 54
+## Changes
 
-The gap goes the **opposite direction** - we're seeing **more** conversions in our systems than Google reports. This happens because:
+### 1. Update edge function: `supabase/functions/import-google-ads-performance/index.ts`
 
-1. **Click-to-Call ads**: Users call from a Google Ads call extension but Google may not fire a pixel conversion
-2. **CTM tracking scope**: CTM tracks ALL calls to your tracking numbers, including repeat callers and calls from people who found you via Google but didn't click an ad
-3. **Attribution differences**: CTM marks calls as "Google Ads" based on tracking number routing, not necessarily a confirmed ad click
+Add a `parseCSVLine` helper function that tracks whether the parser is inside quotes, preventing splits on commas within quoted values.
 
-## Plan
+Replace both `.split(delimiter)` calls (header parsing and data row parsing) with the new function.
 
-### 1. Add Smart Reconciliation Notice
+### 2. Add RLS policies for UPDATE on `google_ads_performance`
 
-Display a dynamic disclaimer in the conversion breakdown that:
-- Shows when there's a gap (either direction)
-- Explains the specific scenario (forms+calls > conversions OR conversions > forms+calls)
-- For the "CTM higher" case, explain click-to-call dynamics
+The table currently lacks UPDATE and DELETE policies. The edge function uses the service role key so it bypasses RLS, but the upsert needs the ability to update existing rows. Since the service role bypasses RLS this should already work, but we should add UPDATE/DELETE policies for completeness.
 
-### 2. Refresh the Breakdown Styling
+### 3. Re-import
 
-Options to consider:
-- **Option A - Inline accordion**: Smoother animation with Radix Collapsible, subtle gradient background
-- **Option B - Slide-out drawer**: More dramatic, good for detailed data
-- **Option C - Refined in-place expand**: Keep current approach but with cleaner typography, better spacing, progress bars showing percentages
+After deploying the fix, you'll re-upload the same February CSV. The upsert on `(date, campaign)` will overwrite the three broken rows with correct values.
 
-I'll implement **Option C** with:
-- Cleaner card layout with icons
-- Visual progress bars for form/call split
-- The reconciliation message integrated naturally
-- Smooth animation using Collapsible primitive
-
-### 3. Add Click-to-View for Contacts & Deals Cards
-
-Make the "Contacts" and "Deals" cards clickable:
-- **Contacts card**: Opens existing `ContactsDialog` modal showing the detailed contact list
-- **Deals card**: Opens a new `DealsDialog` modal showing deal details (similar pattern)
-
-This provides drill-down capability consistent with the Conversions breakdown.
-
----
-
-## Technical Approach
-
-### File Changes
-
-| File | Changes |
-|------|---------|
-| `src/components/dashboard/FunnelMetrics.tsx` | Add reconciliation logic, improve ConversionBreakdown styling with Collapsible, wire up Contacts/Deals click handlers |
-| `src/components/dashboard/DealsDialog.tsx` | New component - modal showing deal details for selected month |
-| `src/hooks/use-funnel-metrics.tsx` | No changes needed |
-
-### Reconciliation Logic
+## Technical Detail
 
 ```text
-if (forms + calls) > googleConversions:
-  "CTM captures all calls to tracking numbers, including repeat callers 
-   and click-to-call ads that may not trigger Google's pixel."
-   
-if googleConversions > (forms + calls):
-  "Some Google Ads conversions may not result in CRM records due to 
-   abandoned forms, spam filtering, or tracking delays."
+Before: line.split(delimiter)
+  "2026-02-09,PMAX - Mathews,\"1,181\",22,..." 
+  -> ["2026-02-09", "PMAX - Mathews", "\"1", "181\"", "22", ...]
+  -> columns shift, cost = 0
+
+After: parseCSVLine(line, delimiter)  
+  -> ["2026-02-09", "PMAX - Mathews", "1181", "22", ...]
+  -> columns correct, cost parsed properly
 ```
-
-### Styling Improvements
-
-- Replace inline expand with `Collapsible` for smoother animation
-- Add percentage progress bars for visual context
-- Subtle background gradient transition when expanded
-- Remove harsh ring border, use softer shadow instead
-- Add "tap to expand" hint on hover
-
-### Contacts/Deals Interactivity
-
-- Reuse existing `ContactsDialog` for Contacts card
-- Create parallel `DealsDialog` component for Deals card
-- Add visual affordance (subtle hover state, optional chevron)
-- Pass current month context to dialogs
 
