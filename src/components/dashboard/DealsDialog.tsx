@@ -129,7 +129,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[80vh]">
+      <DialogContent className="max-w-7xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="text-xl">
             Deals — {month}
@@ -166,100 +166,86 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
             </div>
 
             <ScrollArea className="h-[50vh]">
-            {/* Header row */}
-            <div className="grid grid-cols-[1fr_120px_80px_120px_120px_120px_70px] gap-2 px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-white border-b border-[#e0e0e0] sticky top-0">
-              <span>Deal</span>
-              <span>Stage</span>
-              <span className="text-right">Amount</span>
-              <span>Contact</span>
-              <span>Campaign</span>
-              <span>Keyword</span>
-              <span className="text-right">Time to Deal</span>
-            </div>
-            
-            <div>
-              {deals?.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No deals found for this month</p>
-              ) : (
-                deals?.map((deal, index) => {
-                  const stageColor = stageColors[deal.deal_stage || ""] || "bg-gray-100 text-gray-600";
-                  const isEven = index % 2 === 0;
-
-                  return (
-                    <div
-                      key={deal.id}
-                      className={`grid grid-cols-[1fr_120px_80px_120px_120px_120px_70px] gap-2 px-4 py-3 hover:bg-gray-50 transition-colors items-center border-b border-[#f5f5f5] ${isEven ? "bg-white" : "bg-[#fafafa]"}`}
-                    >
-                      {/* Deal name - truncated */}
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Briefcase className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                        <span className="font-medium text-gray-900 text-sm truncate" title={deal.deal_name || "Unnamed Deal"}>
-                          {deal.deal_name 
-                            ? (deal.deal_name.length > 35 ? deal.deal_name.substring(0, 35) + "…" : deal.deal_name)
-                            : "Unnamed Deal"}
-                        </span>
-                      </div>
-                      
-                      {/* Stage */}
-                      <div>
-                        {deal.deal_stage && (
-                          <Badge variant="secondary" className={`${stageColor} text-xs font-medium`}>
-                            {deal.deal_stage.length > 14 
-                              ? deal.deal_stage.substring(0, 14) + "…" 
-                              : deal.deal_stage}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {/* Amount */}
-                      <span className={`font-bold text-sm text-right ${deal.amount ? "text-emerald-600" : "text-gray-400"}`}>
-                        {formatCurrency(deal.amount)}
-                      </span>
-                      
-                      {/* Contact */}
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {deal.contact_name ? (
-                          <>
-                            <User className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
-                            <span className="text-sm text-gray-700 truncate">{deal.contact_name}</span>
-                          </>
-                        ) : (
-                          <span className="text-sm text-gray-400">—</span>
-                        )}
-                      </div>
-
-                      {/* Campaign */}
-                      <span className="text-xs text-gray-600 truncate" title={deal.campaign || ""}>
-                        {deal.campaign || "—"}
-                      </span>
-
-                      {/* Keyword */}
-                      <span className="text-xs text-gray-600 truncate" title={deal.keyword || ""}>
-                        {deal.keyword || "—"}
-                      </span>
-                      
-                      {/* Time to deal */}
-                      <div className="flex items-center justify-end gap-1">
-                        {deal.days_to_deal !== null ? (
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                            deal.days_to_deal <= 7 
-                              ? "bg-emerald-100 text-emerald-700" 
-                              : deal.days_to_deal <= 30 
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-amber-100 text-amber-700"
-                          }`}>
-                            {deal.days_to_deal === 0 ? "Same day" : `${deal.days_to_deal}d`}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-400">—</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </ScrollArea>
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-white border-b border-[#e0e0e0] z-10">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Deal</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Stage</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Amount</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Campaign</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Keyword</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Days</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {deals?.length === 0 ? (
+                    <tr><td colSpan={7} className="text-center text-gray-500 py-8">No deals found for this month</td></tr>
+                  ) : (
+                    deals?.map((deal, index) => {
+                      const stageColor = stageColors[deal.deal_stage || ""] || "bg-gray-100 text-gray-600";
+                      return (
+                        <tr key={deal.id} className={`hover:bg-gray-50 transition-colors ${index % 2 ? "bg-[#fafafa]" : "bg-white"}`}>
+                          <td className="px-4 py-3 max-w-[220px]">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Briefcase className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                              <span className="font-medium text-gray-900 truncate" title={deal.deal_name || "Unnamed Deal"}>
+                                {deal.deal_name || "Unnamed Deal"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {deal.deal_stage && (
+                              <Badge variant="secondary" className={`${stageColor} text-xs font-medium whitespace-nowrap`}>
+                                {deal.deal_stage.length > 16 ? deal.deal_stage.substring(0, 16) + "…" : deal.deal_stage}
+                              </Badge>
+                            )}
+                          </td>
+                          <td className={`px-4 py-3 text-right font-bold whitespace-nowrap ${deal.amount ? "text-emerald-600" : "text-gray-400"}`}>
+                            {formatCurrency(deal.amount)}
+                          </td>
+                          <td className="px-4 py-3 max-w-[140px]">
+                            {deal.contact_name ? (
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <User className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
+                                <span className="text-gray-700 truncate">{deal.contact_name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 max-w-[160px]">
+                            <span className="text-gray-600 truncate block" title={deal.campaign || ""}>
+                              {deal.campaign || "—"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 max-w-[160px]">
+                            <span className="text-gray-600 truncate block" title={deal.keyword || ""}>
+                              {deal.keyword || "—"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {deal.days_to_deal !== null ? (
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                deal.days_to_deal <= 7 
+                                  ? "bg-emerald-100 text-emerald-700" 
+                                  : deal.days_to_deal <= 30 
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-amber-100 text-amber-700"
+                              }`}>
+                                {deal.days_to_deal === 0 ? "Same day" : `${deal.days_to_deal}d`}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </ScrollArea>
           </>
         )}
       </DialogContent>
