@@ -26,6 +26,8 @@ interface DealWithContact {
   contact_name: string | null;
   contact_create_date: string | null;
   days_to_deal: number | null;
+  campaign: string | null;
+  keyword: string | null;
 }
 
 const stageColors: Record<string, string> = {
@@ -51,7 +53,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
       // Fetch deals
       const { data: dealsData, error: dealsError } = await supabase
         .from("hubspot_deals")
-        .select("id, deal_name, deal_stage, amount, create_date, associated_contact_id")
+        .select("id, deal_name, deal_stage, amount, create_date, associated_contact_id, traffic_source_drill_down_1, traffic_source_drill_down_2")
         .gte("create_date", startDate.toISOString())
         .lte("create_date", endDate.toISOString())
         .order("create_date", { ascending: false });
@@ -103,6 +105,8 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
           contact_name: contact?.name || null,
           contact_create_date: contact?.create_date || null,
           days_to_deal: daysToDeeal,
+          campaign: deal.traffic_source_drill_down_1 || null,
+          keyword: deal.traffic_source_drill_down_2 || null,
         };
       });
     },
@@ -163,11 +167,13 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
 
             <ScrollArea className="h-[50vh]">
             {/* Header row */}
-            <div className="grid grid-cols-[1fr_130px_90px_130px_70px] gap-3 px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-white border-b border-[#e0e0e0] sticky top-0">
+            <div className="grid grid-cols-[1fr_120px_80px_120px_120px_120px_70px] gap-2 px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-white border-b border-[#e0e0e0] sticky top-0">
               <span>Deal</span>
               <span>Stage</span>
               <span className="text-right">Amount</span>
               <span>Contact</span>
+              <span>Campaign</span>
+              <span>Keyword</span>
               <span className="text-right">Time to Deal</span>
             </div>
             
@@ -182,7 +188,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
                   return (
                     <div
                       key={deal.id}
-                      className={`grid grid-cols-[1fr_130px_90px_130px_70px] gap-3 px-4 py-3 hover:bg-gray-50 transition-colors items-center border-b border-[#f5f5f5] ${isEven ? "bg-white" : "bg-[#fafafa]"}`}
+                      className={`grid grid-cols-[1fr_120px_80px_120px_120px_120px_70px] gap-2 px-4 py-3 hover:bg-gray-50 transition-colors items-center border-b border-[#f5f5f5] ${isEven ? "bg-white" : "bg-[#fafafa]"}`}
                     >
                       {/* Deal name - truncated */}
                       <div className="flex items-center gap-2 min-w-0">
@@ -221,6 +227,16 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
                           <span className="text-sm text-gray-400">—</span>
                         )}
                       </div>
+
+                      {/* Campaign */}
+                      <span className="text-xs text-gray-600 truncate" title={deal.campaign || ""}>
+                        {deal.campaign || "—"}
+                      </span>
+
+                      {/* Keyword */}
+                      <span className="text-xs text-gray-600 truncate" title={deal.keyword || ""}>
+                        {deal.keyword || "—"}
+                      </span>
                       
                       {/* Time to deal */}
                       <div className="flex items-center justify-end gap-1">
