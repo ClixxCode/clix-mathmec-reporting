@@ -58,7 +58,10 @@ function DashboardContent() {
               <img src={mathmecLogo} alt="Mathews Mechanical" className="h-20 w-auto" />
               <div>
                 <h1 className="text-xl font-bold text-white">Performance Report</h1>
-                <p className="text-gray-300 text-sm">{monthLabel}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-gray-300 text-sm">{monthLabel}</p>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider bg-white/10 text-gray-300 px-2 py-0.5 rounded">Google Ads</span>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3 text-sm">
@@ -109,7 +112,7 @@ function DashboardContent() {
 
         {/* Footer */}
         <footer className="text-center text-sm text-gray-400 py-6 border-t border-gray-200">
-          <p>Report generated for Mathews Mechanical • {monthLabel}</p>
+          <p>Report generated for Mathews Mechanical • {monthLabel} • Data source: Google Ads</p>
           <Link to="/admin" className="text-gray-400 hover:text-gray-600 transition-colors mt-2 inline-block">
             Admin
           </Link>
