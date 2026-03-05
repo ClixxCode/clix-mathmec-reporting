@@ -30,6 +30,7 @@ interface Contact {
   message: string | null;
   hubspot_create_date: string | null;
   traffic_source_drill_down_1: string | null;
+  traffic_source_drill_down_2: string | null;
 }
 
 interface CTMCall {
@@ -102,8 +103,15 @@ function ContactCard({
               {contact.traffic_source_drill_down_1 && (
                 <div className="flex items-center gap-1.5">
                   <Target className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="text-xs text-blue-600 font-medium max-w-[150px] truncate">
+                  <span className="text-xs text-blue-600 font-medium max-w-[150px] truncate" title={contact.traffic_source_drill_down_1}>
                     {contact.traffic_source_drill_down_1}
+                  </span>
+                </div>
+              )}
+              {contact.traffic_source_drill_down_2 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500 max-w-[150px] truncate" title={contact.traffic_source_drill_down_2}>
+                    {contact.traffic_source_drill_down_2}
                   </span>
                 </div>
               )}
@@ -196,7 +204,7 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
     queryFn: async (): Promise<Contact[]> => {
       const { data, error } = await supabase
         .from("hubspot_contacts")
-        .select("id, first_name, last_name, email, phone_number, company_name, lead_status, quality_score, message, hubspot_create_date, traffic_source_drill_down_1")
+        .select("id, first_name, last_name, email, phone_number, company_name, lead_status, quality_score, message, hubspot_create_date, traffic_source_drill_down_1, traffic_source_drill_down_2")
         .ilike("original_traffic_source", "Paid Search")
         .gte("hubspot_create_date", startDate.toISOString())
         .lte("hubspot_create_date", endDate.toISOString())
