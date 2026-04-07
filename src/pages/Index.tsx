@@ -89,6 +89,10 @@ function DashboardContent() {
       <ExecutiveSummaryMobile />
 
       <main ref={contentRef} className="container py-8 space-y-8">
+        {/* Data Source Notice */}
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          <strong>Note:</strong> This performance report reflects data exclusively from paid search advertising (Google Ads) and does not represent all digital marketing efforts.
+        </div>
         {/* Funnel Metrics */}
         <section>
           <FunnelMetrics />
