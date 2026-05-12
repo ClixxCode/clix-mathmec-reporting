@@ -413,9 +413,74 @@ function MonthlyBarChart({
 }
 
 function fmtDate(s: string | null) {
+  // formatted date helper
   if (!s) return "—";
   const d = new Date(s);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function InvestmentSection({
+  q2026, q2025, range2026, range2025,
+}: {
+  q2026: QuarterStats;
+  q2025: QuarterStats;
+  range2026: { start: Date; end: Date };
+  range2025: { start: Date; end: Date };
+}) {
+  const fee2026 = managementFeeBetween(range2026.start, range2026.end);
+  const fee2025 = managementFeeBetween(range2025.start, range2025.end);
+  const inv2026 = q2026.adSpend + fee2026;
+  const inv2025 = q2025.adSpend + fee2025;
+  const roas2026 = inv2026 > 0 ? q2026.wonRevenue / inv2026 : 0;
+  const roas2025 = inv2025 > 0 ? q2025.wonRevenue / inv2025 : 0;
+  const pipe2026 = inv2026 > 0 ? q2026.pipeline / inv2026 : 0;
+  const pipe2025 = inv2025 > 0 ? q2025.pipeline / inv2025 : 0;
+  const cpc2026 = q2026.paidContacts.length > 0 ? inv2026 / q2026.paidContacts.length : 0;
+  const cpc2025 = q2025.paidContacts.length > 0 ? inv2025 / q2025.paidContacts.length : 0;
+
+  const rows = [
+    { label: "Total Investment", a: fmtUSD(inv2025), b: fmtUSD(inv2026),
+      sub: `Ads + Mgmt fee (Q1 2025 fee: ${fmtUSD(fee2025)} • Q1 2026 fee: ${fmtUSD(fee2026)})` },
+    { label: "Won Revenue", a: fmtUSD(q2025.wonRevenue), b: fmtUSD(q2026.wonRevenue) },
+    { label: "ROAS (Won ÷ Investment)", a: `${roas2025.toFixed(2)}x`, b: `${roas2026.toFixed(2)}x` },
+    { label: "Pipeline ÷ Investment", a: `${pipe2025.toFixed(2)}x`, b: `${pipe2026.toFixed(2)}x` },
+    { label: "Cost per Paid Search Contact",
+      a: cpc2025 > 0 ? fmtUSD(cpc2025) : "—",
+      b: cpc2026 > 0 ? fmtUSD(cpc2026) : "—" },
+  ];
+
+  return (
+    <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+      <h3 className="font-semibold text-foreground text-lg mb-1">Investment & Returns</h3>
+      <p className="text-xs text-muted-foreground mb-4">
+        Investment = Google Ads spend + Mathews management fee ($1,750/month from Nov 2025; $1,355.04 for Oct 2025).
+        No management fee applied to Q1 2025 (engagement began Oct 2025).
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <th className="py-2 pr-4 font-medium">Metric</th>
+              <th className="py-2 px-4 font-medium text-right">Q1 2025</th>
+              <th className="py-2 pl-4 font-medium text-right">Q1 2026</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.label} className="border-b border-border last:border-0 align-top">
+                <td className="py-3 pr-4 text-foreground">
+                  <div>{r.label}</div>
+                  {r.sub && <div className="text-xs text-muted-foreground mt-0.5">{r.sub}</div>}
+                </td>
+                <td className="py-3 px-4 text-right text-muted-foreground whitespace-nowrap">{r.a}</td>
+                <td className="py-3 pl-4 text-right font-semibold text-foreground whitespace-nowrap">{r.b}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 function ContactList({ title, rows }: { title: string; rows: ContactRow[] }) {
