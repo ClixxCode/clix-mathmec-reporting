@@ -243,6 +243,13 @@ export function QuarterlyReview() {
         />
       </div>
 
+      <InvestmentSection
+        q2026={q1_2026}
+        q2025={q1_2025}
+        range2026={{ start: new Date(Date.UTC(2026, 0, 1)), end: new Date(Date.UTC(2026, 3, 1)) }}
+        range2025={{ start: new Date(Date.UTC(2025, 0, 1)), end: new Date(Date.UTC(2025, 3, 1)) }}
+      />
+
       <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
         <h3 className="font-semibold text-foreground text-lg mb-4">Contacts by Traffic Source</h3>
         <div className="overflow-x-auto">
