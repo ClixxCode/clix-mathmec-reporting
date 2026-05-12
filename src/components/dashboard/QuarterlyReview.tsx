@@ -12,21 +12,38 @@ interface QuarterStats {
 }
 
 async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
-  const [contactsRes, dealsRes] = await Promise.all([
-    supabase
-      .from("hubspot_contacts")
-      .select("original_traffic_source", { count: "exact" })
-      .gte("hubspot_create_date", start)
-      .lt("hubspot_create_date", end),
-    supabase
-      .from("hubspot_deals")
-      .select("amount")
-      .gte("create_date", start)
-      .lt("create_date", end),
-  ]);
+  async function fetchAll<T>(
+    table: "hubspot_contacts" | "hubspot_deals",
+    columns: string,
+    dateCol: string
+  ): Promise<T[]> {
+    const pageSize = 1000;
+    let from = 0;
+    const out: T[] = [];
+    while (true) {
+      const { data, error } = await supabase
+        .from(table)
+        .select(columns)
+        .gte(dateCol, start)
+        .lt(dateCol, end)
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      const rows = (data ?? []) as T[];
+      out.push(...rows);
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+    return out;
+  }
 
-  const contacts = contactsRes.data ?? [];
-  const deals = dealsRes.data ?? [];
+  const [contacts, deals] = await Promise.all([
+    fetchAll<{ original_traffic_source: string | null }>(
+      "hubspot_contacts",
+      "original_traffic_source",
+      "hubspot_create_date"
+    ),
+    fetchAll<{ amount: number | null }>("hubspot_deals", "amount", "create_date"),
+  ]);
 
   const bySource: Record<string, number> = {};
   for (const c of contacts) {
