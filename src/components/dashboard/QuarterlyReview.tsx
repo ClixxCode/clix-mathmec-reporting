@@ -5,6 +5,9 @@ import { ArrowDownRight, ArrowUpRight, Users, DollarSign, Briefcase, TrendingUp 
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
 
 interface ContactRow {
   record_id: string;
@@ -165,6 +168,8 @@ export function QuarterlyReview() {
     new Set([...Object.keys(q1_2026.bySource), ...Object.keys(q1_2025.bySource)])
   ).sort((a, b) => (q1_2026.bySource[b] ?? 0) - (q1_2026.bySource[a] ?? 0));
 
+  const monthlyData = buildMonthly(q1_2026, q1_2025);
+
   return (
     <div className="space-y-8">
       <div>
@@ -206,6 +211,19 @@ export function QuarterlyReview() {
           previous={q1_2025.deals.length}
           format={(n) => n.toLocaleString()}
           onClick={() => setDrill("deals")}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MonthlyBarChart
+          title="Contacts by Month"
+          data={monthlyData.contacts}
+          format={(n) => n.toLocaleString()}
+        />
+        <MonthlyBarChart
+          title="Pipeline Value by Month"
+          data={monthlyData.pipeline}
+          format={fmtMoney}
         />
       </div>
 
@@ -306,11 +324,68 @@ function DrillDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-1 pr-2">
+        <ScrollArea className="flex-1 min-h-0 pr-2 h-full">
           {content}
         </ScrollArea>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function buildMonthly(q2026: QuarterStats, q2025: QuarterStats) {
+  const months = ["Jan", "Feb", "Mar"];
+  const bucket = <T extends { date: string | null }>(rows: T[]) => {
+    const out = [0, 0, 0];
+    for (const r of rows) {
+      if (!r.date) continue;
+      const m = new Date(r.date).getUTCMonth();
+      if (m >= 0 && m <= 2) out[m] += 1;
+    }
+    return out;
+  };
+  const sumBucket = (rows: DealRow[]) => {
+    const out = [0, 0, 0];
+    for (const d of rows) {
+      if (!d.create_date) continue;
+      const m = new Date(d.create_date).getUTCMonth();
+      if (m >= 0 && m <= 2) out[m] += Number(d.amount) || 0;
+    }
+    return out;
+  };
+  const c2026 = bucket(q2026.contacts.map((c) => ({ date: c.hubspot_create_date })));
+  const c2025 = bucket(q2025.contacts.map((c) => ({ date: c.hubspot_create_date })));
+  const p2026 = sumBucket(q2026.deals);
+  const p2025 = sumBucket(q2025.deals);
+  return {
+    contacts: months.map((m, i) => ({ month: m, "2025": c2025[i], "2026": c2026[i] })),
+    pipeline: months.map((m, i) => ({ month: m, "2025": p2025[i], "2026": p2026[i] })),
+  };
+}
+
+function MonthlyBarChart({
+  title, data, format,
+}: {
+  title: string;
+  data: Array<{ month: string; "2025": number; "2026": number }>;
+  format: (n: number) => string;
+}) {
+  return (
+    <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+      <h3 className="font-semibold text-foreground text-lg mb-4">{title}</h3>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => format(Number(v))} width={80} />
+            <Tooltip formatter={(v: number) => format(Number(v))} />
+            <Legend />
+            <Bar dataKey="2025" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="2026" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }
 
