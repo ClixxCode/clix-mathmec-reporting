@@ -34,7 +34,7 @@ function generateAvailableMonths(): { value: string; label: string; date: Date }
 
 export function DashboardFiltersProvider({ children }: { children: ReactNode }) {
   // Default to January 2026 based on the data we have
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date(2026, 2, 1));
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date(2026, 3, 1));
   
   const availableMonths = generateAvailableMonths();
   
