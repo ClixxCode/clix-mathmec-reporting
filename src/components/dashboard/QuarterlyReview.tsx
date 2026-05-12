@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowDownRight, ArrowUpRight, Users, DollarSign, Briefcase, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { managementFeeBetween, fmtUSD } from "@/lib/investment";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -35,6 +36,8 @@ interface QuarterStats {
   bySource: Record<string, number>;
   pipeline: number;
   paidContacts: ContactRow[];
+  adSpend: number;
+  wonRevenue: number;
 }
 
 async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
@@ -75,6 +78,17 @@ async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
     ),
   ]);
 
+  const { data: adsData, error: adsErr } = await supabase
+    .from("google_ads_performance")
+    .select("cost")
+    .gte("date", start)
+    .lt("date", end);
+  if (adsErr) throw adsErr;
+  const adSpend = (adsData || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
+  const wonRevenue = deals
+    .filter((d) => (d.deal_stage || "").toLowerCase().includes("won"))
+    .reduce((s, d) => s + (Number(d.amount) || 0), 0);
+
   const bySource: Record<string, number> = {};
   for (const c of contacts) {
     const k = c.original_traffic_source ?? "Unknown";
@@ -87,6 +101,8 @@ async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
     bySource,
     pipeline: deals.reduce((s, d) => s + (Number(d.amount) || 0), 0),
     paidContacts: contacts.filter((c) => c.original_traffic_source === "Paid Search"),
+    adSpend,
+    wonRevenue,
   };
 }
 
