@@ -438,15 +438,31 @@ function InvestmentSection({
   const cpc2026 = q2026.paidContacts.length > 0 ? inv2026 / q2026.paidContacts.length : 0;
   const cpc2025 = q2025.paidContacts.length > 0 ? inv2025 / q2025.paidContacts.length : 0;
 
+  const fmtPct = (curr: number, prev: number, lowerIsBetter = false) => {
+    if (!prev) return { text: curr > 0 ? "—" : "—", positive: true, neutral: true };
+    const change = ((curr - prev) / prev) * 100;
+    const positive = lowerIsBetter ? change <= 0 : change >= 0;
+    return {
+      text: `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`,
+      positive,
+      neutral: false,
+    };
+  };
+
   const rows = [
     { label: "Total Investment", a: fmtUSD(inv2025), b: fmtUSD(inv2026),
+      change: fmtPct(inv2026, inv2025, true),
       sub: `Ads + Mgmt fee (Q1 2025 fee: ${fmtUSD(fee2025)} • Q1 2026 fee: ${fmtUSD(fee2026)})` },
-    { label: "Won Revenue", a: fmtUSD(q2025.wonRevenue), b: fmtUSD(q2026.wonRevenue) },
-    { label: "ROAS (Won ÷ Investment)", a: `${roas2025.toFixed(2)}x`, b: `${roas2026.toFixed(2)}x` },
-    { label: "Pipeline ÷ Investment", a: `${pipe2025.toFixed(2)}x`, b: `${pipe2026.toFixed(2)}x` },
+    { label: "Won Revenue", a: fmtUSD(q2025.wonRevenue), b: fmtUSD(q2026.wonRevenue),
+      change: fmtPct(q2026.wonRevenue, q2025.wonRevenue) },
+    { label: "ROAS (Won ÷ Investment)", a: `${roas2025.toFixed(2)}x`, b: `${roas2026.toFixed(2)}x`,
+      change: fmtPct(roas2026, roas2025) },
+    { label: "Pipeline ÷ Investment", a: `${pipe2025.toFixed(2)}x`, b: `${pipe2026.toFixed(2)}x`,
+      change: fmtPct(pipe2026, pipe2025) },
     { label: "Cost per Paid Search Contact",
       a: cpc2025 > 0 ? fmtUSD(cpc2025) : "—",
-      b: cpc2026 > 0 ? fmtUSD(cpc2026) : "—" },
+      b: cpc2026 > 0 ? fmtUSD(cpc2026) : "—",
+      change: fmtPct(cpc2026, cpc2025, true) },
   ];
 
   return (
@@ -462,7 +478,8 @@ function InvestmentSection({
             <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
               <th className="py-2 pr-4 font-medium">Metric</th>
               <th className="py-2 px-4 font-medium text-right">Q1 2025</th>
-              <th className="py-2 pl-4 font-medium text-right">Q1 2026</th>
+              <th className="py-2 px-4 font-medium text-right">Q1 2026</th>
+              <th className="py-2 pl-4 font-medium text-right">Change</th>
             </tr>
           </thead>
           <tbody>
@@ -473,7 +490,11 @@ function InvestmentSection({
                   {r.sub && <div className="text-xs text-muted-foreground mt-0.5">{r.sub}</div>}
                 </td>
                 <td className="py-3 px-4 text-right text-muted-foreground whitespace-nowrap">{r.a}</td>
-                <td className="py-3 pl-4 text-right font-semibold text-foreground whitespace-nowrap">{r.b}</td>
+                <td className="py-3 px-4 text-right font-semibold text-foreground whitespace-nowrap">{r.b}</td>
+                <td className={cn(
+                  "py-3 pl-4 text-right font-semibold whitespace-nowrap",
+                  r.change.neutral ? "text-muted-foreground" : r.change.positive ? "text-emerald-700" : "text-red-700"
+                )}>{r.change.text}</td>
               </tr>
             ))}
           </tbody>
