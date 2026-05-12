@@ -7,15 +7,18 @@ import { CampaignPerformance } from "@/components/dashboard/CampaignPerformance"
 import { LocationPerformance } from "@/components/dashboard/LocationPerformance";
 import { ExecutiveSummaryDesktop, ExecutiveSummaryMobile } from "@/components/dashboard/ExecutiveSummary";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
+import { QuarterlyReview } from "@/components/dashboard/QuarterlyReview";
 import { DashboardFiltersProvider, useDashboardFilters } from "@/hooks/use-dashboard-filters";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, CalendarDays, CalendarRange } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import mathmecLogo from "@/assets/mathews-logo-white.png";
 import html2pdf from "html2pdf.js";
 
 function DashboardContent() {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [view, setView] = useState<"monthly" | "quarterly">("monthly");
   const { filters } = useDashboardFilters();
 
   const handleDownloadPDF = async () => {
@@ -47,9 +50,44 @@ function DashboardContent() {
   };
 
   const monthLabel = format(filters.selectedMonth, "MMMM yyyy");
+  const periodLabel = view === "monthly" ? monthLabel : "Q1 2026 vs Q1 2025";
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Left Sidebar */}
+      <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-gray-200 bg-white">
+        <div className="px-4 py-5 border-b border-gray-200">
+          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Reports</div>
+        </div>
+        <nav className="flex-1 p-3 space-y-1">
+          <button
+            onClick={() => setView("monthly")}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              view === "monthly"
+                ? "bg-primary/10 text-primary"
+                : "text-gray-700 hover:bg-gray-100"
+            )}
+          >
+            <CalendarDays className="w-4 h-4" />
+            Monthly Review
+          </button>
+          <button
+            onClick={() => setView("quarterly")}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              view === "quarterly"
+                ? "bg-primary/10 text-primary"
+                : "text-gray-700 hover:bg-gray-100"
+            )}
+          >
+            <CalendarRange className="w-4 h-4" />
+            Quarterly Review
+          </button>
+        </nav>
+      </aside>
+
+      <div className="flex-1 min-w-0">
       {/* Header */}
       <header className="border-b border-gray-700" style={{ backgroundColor: '#1A3140' }}>
         <div className="container py-5">
@@ -59,13 +97,14 @@ function DashboardContent() {
               <div>
                 <h1 className="text-xl font-bold text-white">Performance Report</h1>
                 <div className="flex items-center gap-2">
-                  <p className="text-gray-300 text-sm">{monthLabel}</p>
+                  <p className="text-gray-300 text-sm">{periodLabel}</p>
                   <span className="text-[10px] font-semibold uppercase tracking-wider bg-white/10 text-gray-300 px-2 py-0.5 rounded">Google Ads</span>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-3 text-sm">
-              <MonthSelector />
+              {view === "monthly" && <MonthSelector />}
+              {view === "monthly" && (
               <Button
                 onClick={handleDownloadPDF}
                 disabled={isGenerating}
@@ -80,14 +119,16 @@ function DashboardContent() {
                 )}
                 {isGenerating ? "Generating..." : "Download One-Pager"}
               </Button>
+              )}
             </div>
           </div>
         </div>
       </header>
 
       {/* Mobile floating button */}
-      <ExecutiveSummaryMobile />
+      {view === "monthly" && <ExecutiveSummaryMobile />}
 
+      {view === "monthly" ? (
       <main ref={contentRef} className="container py-8 space-y-8">
         {/* Data Source Notice */}
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
@@ -122,6 +163,18 @@ function DashboardContent() {
           </Link>
         </footer>
       </main>
+      ) : (
+      <main className="container py-8 space-y-8">
+        <QuarterlyReview />
+        <footer className="text-center text-sm text-gray-400 py-6 border-t border-gray-200">
+          <p>Quarterly review for Mathews Mechanical • Data source: HubSpot</p>
+          <Link to="/admin" className="text-gray-400 hover:text-gray-600 transition-colors mt-2 inline-block">
+            Admin
+          </Link>
+        </footer>
+      </main>
+      )}
+      </div>
     </div>
   );
 }
