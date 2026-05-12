@@ -5,6 +5,7 @@ import { FunnelMetrics } from "@/components/dashboard/FunnelMetrics";
 import { QualityTrendsTable } from "@/components/dashboard/QualityTrendsTable";
 import { CampaignPerformance } from "@/components/dashboard/CampaignPerformance";
 import { LocationPerformance } from "@/components/dashboard/LocationPerformance";
+import { InvestmentReturns } from "@/components/dashboard/InvestmentReturns";
 import { ExecutiveSummaryDesktop, ExecutiveSummaryMobile } from "@/components/dashboard/ExecutiveSummary";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { QuarterlyReview } from "@/components/dashboard/QuarterlyReview";
@@ -137,6 +138,11 @@ function DashboardContent() {
         {/* Funnel Metrics */}
         <section>
           <FunnelMetrics />
+        </section>
+
+        {/* Investment & Returns */}
+        <section>
+          <InvestmentReturns />
         </section>
 
         {/* Two Column Layout */}
