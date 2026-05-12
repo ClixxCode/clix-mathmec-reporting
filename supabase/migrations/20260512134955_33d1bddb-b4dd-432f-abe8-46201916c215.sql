@@ -1,0 +1,1 @@
+DELETE FROM public.hubspot_contacts WHERE created_at >= '2026-05-12 13:46:00+00' AND created_at < '2026-05-12 13:47:00+00';
