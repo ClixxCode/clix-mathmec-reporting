@@ -490,7 +490,11 @@ function InvestmentSection({
                   {r.sub && <div className="text-xs text-muted-foreground mt-0.5">{r.sub}</div>}
                 </td>
                 <td className="py-3 px-4 text-right text-muted-foreground whitespace-nowrap">{r.a}</td>
-                <td className="py-3 pl-4 text-right font-semibold text-foreground whitespace-nowrap">{r.b}</td>
+                <td className="py-3 px-4 text-right font-semibold text-foreground whitespace-nowrap">{r.b}</td>
+                <td className={cn(
+                  "py-3 pl-4 text-right font-semibold whitespace-nowrap",
+                  r.change.neutral ? "text-muted-foreground" : r.change.positive ? "text-emerald-700" : "text-red-700"
+                )}>{r.change.text}</td>
               </tr>
             ))}
           </tbody>
