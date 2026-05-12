@@ -5,6 +5,9 @@ import { ArrowDownRight, ArrowUpRight, Users, DollarSign, Briefcase, TrendingUp 
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
 
 interface ContactRow {
   record_id: string;
@@ -165,6 +168,8 @@ export function QuarterlyReview() {
     new Set([...Object.keys(q1_2026.bySource), ...Object.keys(q1_2025.bySource)])
   ).sort((a, b) => (q1_2026.bySource[b] ?? 0) - (q1_2026.bySource[a] ?? 0));
 
+  const monthlyData = buildMonthly(q1_2026, q1_2025);
+
   return (
     <div className="space-y-8">
       <div>
@@ -206,6 +211,19 @@ export function QuarterlyReview() {
           previous={q1_2025.deals.length}
           format={(n) => n.toLocaleString()}
           onClick={() => setDrill("deals")}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MonthlyBarChart
+          title="Contacts by Month"
+          data={monthlyData.contacts}
+          format={(n) => n.toLocaleString()}
+        />
+        <MonthlyBarChart
+          title="Pipeline Value by Month"
+          data={monthlyData.pipeline}
+          format={fmtMoney}
         />
       </div>
 
