@@ -1,14 +1,37 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowDownRight, ArrowUpRight, Users, DollarSign, Briefcase, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface ContactRow {
+  record_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  company_name: string | null;
+  original_traffic_source: string | null;
+  hubspot_create_date: string | null;
+  lifecycle_stage: string | null;
+}
+
+interface DealRow {
+  deal_id: string;
+  deal_name: string | null;
+  amount: number | null;
+  deal_stage: string | null;
+  create_date: string | null;
+  original_traffic_source: string | null;
+}
 
 interface QuarterStats {
-  contacts: number;
-  paidContacts: number;
-  deals: number;
-  pipeline: number;
+  contacts: ContactRow[];
+  deals: DealRow[];
   bySource: Record<string, number>;
+  pipeline: number;
+  paidContacts: ContactRow[];
 }
 
 async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
@@ -37,12 +60,16 @@ async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
   }
 
   const [contacts, deals] = await Promise.all([
-    fetchAll<{ original_traffic_source: string | null }>(
+    fetchAll<ContactRow>(
       "hubspot_contacts",
-      "original_traffic_source",
+      "record_id, first_name, last_name, email, company_name, original_traffic_source, hubspot_create_date, lifecycle_stage",
       "hubspot_create_date"
     ),
-    fetchAll<{ amount: number | null }>("hubspot_deals", "amount", "create_date"),
+    fetchAll<DealRow>(
+      "hubspot_deals",
+      "deal_id, deal_name, amount, deal_stage, create_date, original_traffic_source",
+      "create_date"
+    ),
   ]);
 
   const bySource: Record<string, number> = {};
@@ -52,11 +79,11 @@ async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
   }
 
   return {
-    contacts: contacts.length,
-    paidContacts: bySource["Paid Search"] ?? 0,
-    deals: deals.length,
-    pipeline: deals.reduce((s, d) => s + (Number(d.amount) || 0), 0),
+    contacts,
+    deals,
     bySource,
+    pipeline: deals.reduce((s, d) => s + (Number(d.amount) || 0), 0),
+    paidContacts: contacts.filter((c) => c.original_traffic_source === "Paid Search"),
   };
 }
 
@@ -70,18 +97,27 @@ function pctChange(curr: number, prev: number) {
 }
 
 function ComparisonCard({
-  label, icon: Icon, current, previous, format,
+  label, icon: Icon, current, previous, format, onClick,
 }: {
   label: string;
   icon: any;
   current: number;
   previous: number;
   format: (n: number) => string;
+  onClick?: () => void;
 }) {
   const change = pctChange(current, previous);
   const positive = change >= 0;
   return (
-    <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className={cn(
+        "text-left bg-card rounded-2xl border border-border p-6 shadow-sm transition",
+        onClick && "hover:border-primary/40 hover:shadow-md cursor-pointer"
+      )}
+    >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Icon className="w-4 h-4" />
@@ -105,7 +141,7 @@ function ComparisonCard({
           <div className="text-lg font-semibold text-muted-foreground">{format(previous)}</div>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -118,6 +154,8 @@ export function QuarterlyReview() {
     queryKey: ["quarter", "2025Q1"],
     queryFn: () => fetchQuarter("2025-01-01", "2025-04-01"),
   });
+
+  const [drill, setDrill] = useState<null | "contacts" | "paid" | "pipeline" | "deals">(null);
 
   if (!q1_2026 || !q1_2025) {
     return <div className="text-muted-foreground text-sm">Loading quarterly comparison…</div>;
@@ -140,16 +178,18 @@ export function QuarterlyReview() {
         <ComparisonCard
           label="Total Contacts"
           icon={Users}
-          current={q1_2026.contacts}
-          previous={q1_2025.contacts}
+          current={q1_2026.contacts.length}
+          previous={q1_2025.contacts.length}
           format={(n) => n.toLocaleString()}
+          onClick={() => setDrill("contacts")}
         />
         <ComparisonCard
           label="Paid Search Contacts"
           icon={TrendingUp}
-          current={q1_2026.paidContacts}
-          previous={q1_2025.paidContacts}
+          current={q1_2026.paidContacts.length}
+          previous={q1_2025.paidContacts.length}
           format={(n) => n.toLocaleString()}
+          onClick={() => setDrill("paid")}
         />
         <ComparisonCard
           label="Pipeline Value"
@@ -157,13 +197,15 @@ export function QuarterlyReview() {
           current={q1_2026.pipeline}
           previous={q1_2025.pipeline}
           format={fmtMoney}
+          onClick={() => setDrill("pipeline")}
         />
         <ComparisonCard
           label="Deals Created"
           icon={Briefcase}
-          current={q1_2026.deals}
-          previous={q1_2025.deals}
+          current={q1_2026.deals.length}
+          previous={q1_2025.deals.length}
           format={(n) => n.toLocaleString()}
+          onClick={() => setDrill("deals")}
         />
       </div>
 
@@ -206,6 +248,151 @@ export function QuarterlyReview() {
 
       <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
         <strong>Note:</strong> Quarterly data spans all traffic sources from HubSpot (contacts and deals). Pipeline value sums the deal amount of all deals created in the quarter.
+      </div>
+
+      <DrillDialog
+        drill={drill}
+        onClose={() => setDrill(null)}
+        q2026={q1_2026}
+        q2025={q1_2025}
+      />
+    </div>
+  );
+}
+
+function DrillDialog({
+  drill, onClose, q2026, q2025,
+}: {
+  drill: null | "contacts" | "paid" | "pipeline" | "deals";
+  onClose: () => void;
+  q2026: QuarterStats;
+  q2025: QuarterStats;
+}) {
+  const open = drill !== null;
+
+  let title = "";
+  let description = "";
+  let content: React.ReactNode = null;
+
+  if (drill === "contacts" || drill === "paid") {
+    const isPaid = drill === "paid";
+    title = isPaid ? "Paid Search Contacts" : "All Contacts";
+    description = "Q1 2026 vs Q1 2025 — click an email to follow up.";
+    const curr = isPaid ? q2026.paidContacts : q2026.contacts;
+    const prev = isPaid ? q2025.paidContacts : q2025.contacts;
+    content = (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ContactList title={`Q1 2026 (${curr.length})`} rows={curr} />
+        <ContactList title={`Q1 2025 (${prev.length})`} rows={prev} />
+      </div>
+    );
+  } else if (drill === "pipeline" || drill === "deals") {
+    title = drill === "pipeline" ? "Pipeline Value Detail" : "Deals Created";
+    description = "Q1 2026 vs Q1 2025 — sorted by amount.";
+    const curr = [...q2026.deals].sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0));
+    const prev = [...q2025.deals].sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0));
+    content = (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <DealList title={`Q1 2026 (${curr.length} • ${fmtMoney(q2026.pipeline)})`} rows={curr} />
+        <DealList title={`Q1 2025 (${prev.length} • ${fmtMoney(q2025.pipeline)})`} rows={prev} />
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="flex-1 pr-2">
+          {content}
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function fmtDate(s: string | null) {
+  if (!s) return "—";
+  const d = new Date(s);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function ContactList({ title, rows }: { title: string; rows: ContactRow[] }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2 font-semibold">{title}</div>
+      <div className="border border-border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <th className="py-2 px-3 font-medium">Name</th>
+              <th className="py-2 px-3 font-medium">Source</th>
+              <th className="py-2 px-3 font-medium">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr><td colSpan={3} className="py-4 px-3 text-center text-muted-foreground">No contacts</td></tr>
+            )}
+            {rows.map((c) => {
+              const name = [c.first_name, c.last_name].filter(Boolean).join(" ") || c.email || "—";
+              return (
+                <tr key={c.record_id} className="border-t border-border">
+                  <td className="py-2 px-3">
+                    <div className="font-medium text-foreground">{name}</div>
+                    {c.email && <div className="text-xs text-muted-foreground">{c.email}</div>}
+                    {c.company_name && <div className="text-xs text-muted-foreground">{c.company_name}</div>}
+                  </td>
+                  <td className="py-2 px-3 text-muted-foreground">{c.original_traffic_source ?? "—"}</td>
+                  <td className="py-2 px-3 text-muted-foreground whitespace-nowrap">{fmtDate(c.hubspot_create_date)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function DealList({ title, rows }: { title: string; rows: DealRow[] }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2 font-semibold">{title}</div>
+      <div className="border border-border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <th className="py-2 px-3 font-medium">Deal</th>
+              <th className="py-2 px-3 font-medium">Stage</th>
+              <th className="py-2 px-3 font-medium text-right">Amount</th>
+              <th className="py-2 px-3 font-medium">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr><td colSpan={4} className="py-4 px-3 text-center text-muted-foreground">No deals</td></tr>
+            )}
+            {rows.map((d) => (
+              <tr key={d.deal_id} className="border-t border-border">
+                <td className="py-2 px-3">
+                  <div className="font-medium text-foreground">{d.deal_name ?? "—"}</div>
+                  {d.original_traffic_source && (
+                    <div className="text-xs text-muted-foreground">{d.original_traffic_source}</div>
+                  )}
+                </td>
+                <td className="py-2 px-3 text-muted-foreground">{d.deal_stage ?? "—"}</td>
+                <td className="py-2 px-3 text-right font-medium text-foreground whitespace-nowrap">
+                  {fmtMoney(Number(d.amount) || 0)}
+                </td>
+                <td className="py-2 px-3 text-muted-foreground whitespace-nowrap">{fmtDate(d.create_date)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
