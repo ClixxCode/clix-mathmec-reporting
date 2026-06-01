@@ -7,14 +7,22 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 type SortKey = "month" | "totalContacts" | "qualificationRate";
 type SortDirection = "asc" | "desc";
 
-const qualificationInfo = `Qualification Rate:
-• Percentage of contacts NOT marked as "Unqualified"
-• Formula: (Total - Unqualified) / Total × 100
-• Higher is better
+const qualificationInfo = `True Qualification Rate
 
-Data Quality Warning (⚠️):
-• Shown when >50% of contacts lack a lead status
-• Indicates sales team needs to review more leads`;
+Formula:
+  Qualified ÷ (Qualified + Disqualified) × 100
+
+Buckets (from HubSpot Leads):
+• Qualified = Lead stage "Qualified" + "Connected" (In Progress)
+• Disqualified = Lead stage "Disqualified" (all reasons, incl. Spam)
+• Excluded from denominator: "New" and "Attempting" (not yet judged — so sales response lag doesn't penalize a campaign)
+
+Data source:
+• Paid Search contacts joined to HubSpot Leads via the associated contact ID
+• A contact with no matching lead is counted in Total Contacts but not in the rate
+
+Warning (⚠️):
+• Shown when >50% of contacts have no lead stage yet`;
 
 export function QualityTrendsTable() {
   const { data: qualityTrends, isLoading, error } = useQualityTrends();
@@ -199,7 +207,7 @@ export function QualityTrendsTable() {
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="text-xs">
-                          <p>{row.unqualifiedCount} unqualified of {row.totalContacts} total</p>
+                          <p>{row.unqualifiedCount} disqualified of {row.totalContacts} total contacts</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
