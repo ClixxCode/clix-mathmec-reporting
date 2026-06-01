@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MODELS = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
+const MODELS = ["google/gemini-3-flash-preview", "google/gemini-3.1-flash-lite-preview"];
 
 const BUCKET_SCORES: Record<string, number | null> = {
   likely_qualified: 22,
@@ -31,7 +31,28 @@ function extractJson(text: string): any {
   try { return JSON.parse(candidate.slice(start, end + 1)); } catch { return null; }
 }
 
+function classifyFromRules(payload: { message: string | null; call_summary: string | null; product: string | null }): { bucket: string; reason: string } | null {
+  const text = [payload.message, payload.product, payload.call_summary].filter(Boolean).join(" ").toLowerCase();
+  if (!text.trim()) return { bucket: "insufficient_context", reason: "No form message and no matched call recording." };
+
+  const spamSignals = ["seo", "backlink", "guest post", "crypto", "whatsapp", "loan", "casino", "rank on google"];
+  if (spamSignals.some((signal) => text.includes(signal))) {
+    return { bucket: "likely_spam", reason: "Message appears to be marketing outreach or spam." };
+  }
+
+  const residentialSignals = ["residential", "front of her house", "front of his house", "home", "decorative gate", "ornamental", "general contractor"];
+  const outOfScopeSignals = ["does not sell", "couldn't promise", "could not promise", "wrong fit", "not in alignment", "primarily handles commercial"];
+  if (residentialSignals.some((signal) => text.includes(signal)) || outOfScopeSignals.some((signal) => text.includes(signal))) {
+    return { bucket: "likely_disqualified", reason: "Residential/decorative custom work is outside Mathews' commercial-industrial fit." };
+  }
+
+  return null;
+}
+
 async function classify(lovableApiKey: string, payload: { message: string | null; call_summary: string | null; product: string | null }): Promise<{ bucket: string; reason: string } | null> {
+  const ruleResult = classifyFromRules(payload);
+  if (ruleResult) return ruleResult;
+
   const system = `You are a lead-quality classifier for Mathews Mechanical, a commercial metal fabrication & welding company. Given a contact's form message and/or matched inbound call summary, classify their likely sales quality into ONE bucket:
 - likely_qualified: real B2B prospect with a concrete fabrication/welding need (project, RFQ, drawings, materials, location, timeline).
 - likely_disqualified: real person but wrong fit (residential, one-off small repair, job seeker, vendor pitch, out-of-scope service like fall protection one-off, etc).
@@ -47,7 +68,7 @@ Matched call summary: ${payload.call_summary?.trim() || "(no call matched)"}`;
     try {
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
+        headers: { "Lovable-API-Key": lovableApiKey, "Content-Type": "application/json" },
         body: JSON.stringify({
           model,
           messages: [{ role: "system", content: system }, { role: "user", content: user }],
@@ -91,12 +112,20 @@ serve(async (req) => {
     const force: boolean = body?.force === true;
     const limit: number = Math.min(Number(body?.limit) || 120, 500);
     const concurrency: number = Math.min(Math.max(Number(body?.concurrency) || 8, 1), 16);
+    const recordIds: string[] = Array.isArray(body?.recordIds) ? body.recordIds.map(String).filter(Boolean) : [];
+    const startDate = typeof body?.startDate === "string" ? body.startDate : null;
+    const endDate = typeof body?.endDate === "string" ? body.endDate : null;
 
     // Pull Paid Search contacts (only those with at least some context)
-    const { data: contacts, error: cErr } = await supabase
+    let contactsQuery = supabase
       .from("hubspot_contacts")
-      .select("record_id, phone_number, message, quality_score, quality_analysis")
-      .ilike("original_traffic_source", "Paid Search");
+      .select("record_id, phone_number, message, quality_score, quality_analysis, hubspot_create_date")
+      .ilike("original_traffic_source", "Paid Search")
+      .order("hubspot_create_date", { ascending: false });
+    if (recordIds.length > 0) contactsQuery = contactsQuery.in("record_id", recordIds);
+    if (startDate) contactsQuery = contactsQuery.gte("hubspot_create_date", startDate);
+    if (endDate) contactsQuery = contactsQuery.lte("hubspot_create_date", endDate);
+    const { data: contacts, error: cErr } = await contactsQuery;
     if (cErr) throw cErr;
 
     // Pull leads -> contact_id map of definitive stages
