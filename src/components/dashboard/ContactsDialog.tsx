@@ -28,6 +28,7 @@ interface Contact {
   company_name: string | null;
   lead_status: string | null;
   quality_score: number | null;
+  quality_analysis: { source?: string; bucket?: string; reason?: string; had_message?: boolean; had_call?: boolean } | null;
   message: string | null;
   hubspot_create_date: string | null;
   traffic_source_drill_down_1: string | null;
@@ -56,9 +57,9 @@ const leadStatusColors: Record<string, string> = {
   "Unqualified": "bg-gray-100 text-gray-600",
 };
 
-const getLeadStageBadge = (lead: LeadInfo | undefined): { label: string; color: string } => {
+const getLeadStageBadge = (lead: LeadInfo | undefined): { label: string; color: string; tooltip?: string } | null => {
   const stage = lead?.lead_stage?.trim();
-  if (!stage) return { label: "No lead yet", color: "bg-gray-100 text-gray-500" };
+  if (!stage) return null;
   const s = stage.toLowerCase();
   if (s === "qualified") return { label: "Qualified", color: "bg-emerald-100 text-emerald-800" };
   if (s === "connected") return { label: "In Progress", color: "bg-blue-100 text-blue-800" };
@@ -72,6 +73,19 @@ const getLeadStageBadge = (lead: LeadInfo | undefined): { label: string; color: 
   if (s === "new") return { label: "New", color: "bg-amber-100 text-amber-800" };
   if (s === "attempting") return { label: "Attempting", color: "bg-amber-100 text-amber-800" };
   return { label: stage, color: "bg-gray-100 text-gray-700" };
+};
+
+const getAiBadge = (qa: Contact["quality_analysis"]): { label: string; color: string; tooltip?: string } | null => {
+  if (!qa || qa.source !== "ai_inferred" || !qa.bucket) return null;
+  const map: Record<string, { label: string; color: string }> = {
+    likely_qualified: { label: "Likely Qualified", color: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
+    likely_disqualified: { label: "Likely Disqualified", color: "bg-red-50 text-red-700 border border-red-200" },
+    likely_spam: { label: "Likely Spam", color: "bg-red-50 text-red-700 border border-red-200" },
+    insufficient_context: { label: "Insufficient context", color: "bg-gray-100 text-gray-500" },
+  };
+  const m = map[qa.bucket];
+  if (!m) return null;
+  return { ...m, tooltip: qa.reason };
 };
 
 // Normalize phone numbers for comparison (strip non-digits, handle +1 prefix)
@@ -89,7 +103,7 @@ function ContactCard({
   matchedCalls 
 }: { 
   contact: Contact; 
-  stageBadge: { label: string; color: string }; 
+  stageBadge: { label: string; color: string; tooltip?: string; isAi?: boolean }; 
   matchedCalls?: CTMCall[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -103,7 +117,12 @@ function ContactCard({
               <span className="font-medium text-gray-900 truncate">
                 {contact.first_name || ""} {contact.last_name || "Unknown"}
               </span>
-              <Badge variant="secondary" className={stageBadge.color}>
+              <Badge
+                variant="secondary"
+                className={stageBadge.color}
+                title={stageBadge.tooltip}
+              >
+                {stageBadge.isAi && <span className="mr-1 text-[9px] font-bold opacity-70">AI</span>}
                 {stageBadge.label}
               </Badge>
             </div>
@@ -212,7 +231,7 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
     queryFn: async (): Promise<Contact[]> => {
       const { data, error } = await supabase
         .from("hubspot_contacts")
-        .select("id, record_id, first_name, last_name, email, phone_number, company_name, lead_status, quality_score, message, hubspot_create_date, traffic_source_drill_down_1, traffic_source_drill_down_2")
+        .select("id, record_id, first_name, last_name, email, phone_number, company_name, lead_status, quality_score, quality_analysis, message, hubspot_create_date, traffic_source_drill_down_1, traffic_source_drill_down_2")
         .ilike("original_traffic_source", "Paid Search")
         .gte("hubspot_create_date", startDate.toISOString())
         .lte("hubspot_create_date", endDate.toISOString())
@@ -300,7 +319,10 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
                 <p className="text-center text-gray-500 py-8">No contacts found for this month</p>
               ) : (
                 contacts?.map((contact) => {
-                  const stageBadge = getLeadStageBadge(leadByContact.get(contact.record_id));
+                  const leadBadge = getLeadStageBadge(leadByContact.get(contact.record_id));
+                  const aiBadge = !leadBadge ? getAiBadge(contact.quality_analysis) : null;
+                  const stageBadge = leadBadge
+                    ?? (aiBadge ? { ...aiBadge, isAi: true } : { label: "No lead yet", color: "bg-gray-100 text-gray-500" });
                   
                   // Find matching calls by phone number
                   const normalizedContactPhone = normalizePhone(contact.phone_number);
