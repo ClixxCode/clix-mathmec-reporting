@@ -222,6 +222,9 @@ function ContactCard({
 }
 
 export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isScoring, setIsScoring] = useState(false);
   // Parse month for date range
   const [monthName, year] = month.split(" ");
   const monthDate = new Date(`${monthName} 1, ${year}`);
@@ -257,6 +260,28 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
     },
     enabled: open,
   });
+
+  const handleAiScore = async () => {
+    setIsScoring(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-score-contacts", { body: {} });
+      if (error) throw error;
+      const s = data?.summary || {};
+      toast({
+        title: "AI scoring complete",
+        description: `${s.scored ?? 0} scored · ${s.skipped_insufficient ?? 0} insufficient · ${s.failed ?? 0} failed (of ${s.candidates ?? 0} unscored)`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["month-contacts", month] });
+    } catch (e) {
+      toast({
+        title: "AI scoring failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsScoring(false);
+    }
+  };
 
   const leadByContact = new Map<string, LeadInfo>();
   leads?.forEach((l) => {
@@ -302,12 +327,27 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle className="text-xl">
-            Paid Search Contacts — {month}
-          </DialogTitle>
-          <DialogDescription>
-            Contacts from paid search with matched call recordings and summaries
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <DialogTitle className="text-xl">
+                Paid Search Contacts — {month}
+              </DialogTitle>
+              <DialogDescription>
+                Contacts from paid search with matched call recordings and summaries
+              </DialogDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 flex-shrink-0 mr-6"
+              disabled={isScoring}
+              onClick={handleAiScore}
+              title="Use AI to estimate quality for contacts without a HubSpot lead stage, based on their form message and matched call recording."
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${isScoring ? "animate-pulse" : ""}`} />
+              {isScoring ? "Scoring…" : "AI-score gaps"}
+            </Button>
+          </div>
         </DialogHeader>
         
         {isLoading ? (
