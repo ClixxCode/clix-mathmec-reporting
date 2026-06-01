@@ -112,12 +112,20 @@ serve(async (req) => {
     const force: boolean = body?.force === true;
     const limit: number = Math.min(Number(body?.limit) || 120, 500);
     const concurrency: number = Math.min(Math.max(Number(body?.concurrency) || 8, 1), 16);
+    const recordIds: string[] = Array.isArray(body?.recordIds) ? body.recordIds.map(String).filter(Boolean) : [];
+    const startDate = typeof body?.startDate === "string" ? body.startDate : null;
+    const endDate = typeof body?.endDate === "string" ? body.endDate : null;
 
     // Pull Paid Search contacts (only those with at least some context)
-    const { data: contacts, error: cErr } = await supabase
+    let contactsQuery = supabase
       .from("hubspot_contacts")
-      .select("record_id, phone_number, message, quality_score, quality_analysis")
-      .ilike("original_traffic_source", "Paid Search");
+      .select("record_id, phone_number, message, quality_score, quality_analysis, hubspot_create_date")
+      .ilike("original_traffic_source", "Paid Search")
+      .order("hubspot_create_date", { ascending: false });
+    if (recordIds.length > 0) contactsQuery = contactsQuery.in("record_id", recordIds);
+    if (startDate) contactsQuery = contactsQuery.gte("hubspot_create_date", startDate);
+    if (endDate) contactsQuery = contactsQuery.lte("hubspot_create_date", endDate);
+    const { data: contacts, error: cErr } = await contactsQuery;
     if (cErr) throw cErr;
 
     // Pull leads -> contact_id map of definitive stages
