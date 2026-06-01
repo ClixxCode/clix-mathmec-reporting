@@ -10,16 +10,17 @@ import { ExecutiveSummaryDesktop, ExecutiveSummaryMobile } from "@/components/da
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { QuarterlyReview } from "@/components/dashboard/QuarterlyReview";
 import { DashboardFiltersProvider, useDashboardFilters } from "@/hooks/use-dashboard-filters";
-import { Download, Loader2, CalendarDays, CalendarRange } from "lucide-react";
+import { Download, Loader2, CalendarDays, CalendarRange, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import mathmecLogo from "@/assets/mathews-logo-white.png";
 import html2pdf from "html2pdf.js";
+import { QualityInsights } from "@/components/dashboard/QualityInsights";
 
 function DashboardContent() {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [view, setView] = useState<"monthly" | "quarterly">("monthly");
+  const [view, setView] = useState<"monthly" | "quarterly" | "quality">("monthly");
   const { filters } = useDashboardFilters();
 
   const handleDownloadPDF = async () => {
@@ -84,6 +85,21 @@ function DashboardContent() {
           >
             <CalendarRange className="w-4 h-4" />
             Quarterly Review
+          </button>
+          <button
+            onClick={() => setView("quality")}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              view === "quality"
+                ? "bg-primary/10 text-primary"
+                : "text-gray-700 hover:bg-gray-100"
+            )}
+          >
+            <FlaskConical className="w-4 h-4" />
+            <span className="flex-1 text-left">Quality Insights</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+              Beta
+            </span>
           </button>
         </nav>
       </aside>
