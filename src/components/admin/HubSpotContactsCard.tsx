@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Upload, Users, Search, RefreshCw, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { Upload, Users, Search, RefreshCw, CheckCircle2, AlertCircle, Clock, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ImportSummary {
@@ -28,6 +28,7 @@ export function HubSpotContactsCard() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [lastImport, setLastImport] = useState<ImportSummary | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isScoring, setIsScoring] = useState(false);
 
   const { data: analytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = useQuery({
     queryKey: ["contact-analytics"],
@@ -277,6 +278,35 @@ export function HubSpotContactsCard() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${analyticsLoading ? "animate-spin" : ""}`} />
             Refresh
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 gap-1.5"
+            disabled={isScoring}
+            onClick={async () => {
+              setIsScoring(true);
+              try {
+                const { data, error } = await supabase.functions.invoke("ai-score-contacts", { body: {} });
+                if (error) throw error;
+                const s = data?.summary || {};
+                toast({
+                  title: "AI scoring complete",
+                  description: `${s.scored ?? 0} scored · ${s.skipped_insufficient ?? 0} insufficient · ${s.failed ?? 0} failed (of ${s.candidates ?? 0} candidates without a lead stage)`,
+                });
+              } catch (e) {
+                toast({
+                  title: "AI scoring failed",
+                  description: e instanceof Error ? e.message : "Unknown error",
+                  variant: "destructive",
+                });
+              } finally {
+                setIsScoring(false);
+              }
+            }}
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${isScoring ? "animate-pulse" : ""}`} />
+            {isScoring ? "Scoring…" : "AI-score gaps"}
           </Button>
         </div>
       </CardContent>
