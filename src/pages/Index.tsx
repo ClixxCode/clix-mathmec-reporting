@@ -185,11 +185,21 @@ function DashboardContent() {
           </Link>
         </footer>
       </main>
-      ) : (
+      ) : view === "quarterly" ? (
       <main className="container py-8 space-y-8">
         <QuarterlyReview />
         <footer className="text-center text-sm text-gray-400 py-6 border-t border-gray-200">
           <p>Quarterly review for Mathews Mechanical • Data source: HubSpot</p>
+          <Link to="/admin" className="text-gray-400 hover:text-gray-600 transition-colors mt-2 inline-block">
+            Admin
+          </Link>
+        </footer>
+      </main>
+      ) : (
+      <main className="container py-8 space-y-8">
+        <QualityInsights />
+        <footer className="text-center text-sm text-gray-400 py-6 border-t border-gray-200">
+          <p>Quality Insights (Beta) • {monthLabel} • Sources: Google Ads, HubSpot, AI scoring</p>
           <Link to="/admin" className="text-gray-400 hover:text-gray-600 transition-colors mt-2 inline-block">
             Admin
           </Link>
