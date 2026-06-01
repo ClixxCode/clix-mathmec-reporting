@@ -10,7 +10,7 @@ const fmtCurrency = (n: number) =>
 const fmtPct = (n: number) => `${(n * 100).toFixed(0)}%`;
 
 export function QualityInsights() {
-  const { rows, totals, topContactReasons, topLeadReasons, isLoading } = useQualityInsights();
+  const { rows, sourceRows, totals, topContactReasons, topLeadReasons, isLoading } = useQualityInsights();
 
   if (isLoading) {
     return (
@@ -22,8 +22,13 @@ export function QualityInsights() {
     );
   }
 
-  const totalScored = totals.qualified + totals.disqualified + totals.spam;
-  const qualifiedRate = totalScored > 0 ? totals.qualified / totalScored : 0;
+  // All-source totals (broader signal)
+  const allContacts = sourceRows.reduce((a, r) => a + r.contacts, 0);
+  const allQualified = sourceRows.reduce((a, r) => a + r.qualified, 0);
+  const allDisqualified = sourceRows.reduce((a, r) => a + r.disqualified, 0);
+  const allSpam = sourceRows.reduce((a, r) => a + r.spam, 0);
+  const allScored = allQualified + allDisqualified + allSpam;
+  const qualifiedRate = allScored > 0 ? allQualified / allScored : 0;
   const costPerQualified = totals.qualified > 0 ? totals.spend / totals.qualified : null;
 
   // Ranked rows for best/worst (only ones with spend and ≥3 contacts to avoid noise)
@@ -50,17 +55,17 @@ export function QualityInsights() {
 
         {/* Headline stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard label="Paid Spend" value={fmtCurrency(totals.spend)} />
-          <StatCard label="Paid Contacts" value={totals.contacts.toString()} />
+          <StatCard label="All Contacts" value={allContacts.toString()} sub="Across every traffic source" />
           <StatCard
             label="Qualified Rate"
             value={fmtPct(qualifiedRate)}
-            sub={`${totals.qualified} of ${totalScored} scored`}
+            sub={`${allQualified} qualified · ${allDisqualified} disqualified · ${allSpam} spam`}
           />
+          <StatCard label="Paid Spend" value={fmtCurrency(totals.spend)} sub={`${totals.contacts} paid contacts`} />
           <StatCard
             label="Cost per Qualified"
             value={costPerQualified !== null ? fmtCurrency(costPerQualified) : "—"}
-            sub={totals.qualified === 0 ? "No qualified contacts yet" : undefined}
+            sub={totals.qualified === 0 ? "No qualified paid contacts yet" : "Paid spend ÷ paid qualified"}
           />
         </div>
 
@@ -117,12 +122,64 @@ export function QualityInsights() {
           </Card>
         )}
 
+        {/* Per-source quality (all traffic sources) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold">Quality by Traffic Source</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Every contact in the selected month, classified by sales-confirmed lead stage when available, otherwise the AI bucket.
+            </p>
+          </CardHeader>
+          <CardContent>
+            {sourceRows.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No contact data for this month</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[180px]">Source</TableHead>
+                      <TableHead className="text-right">Contacts</TableHead>
+                      <TableHead className="text-right text-emerald-700">Qualified</TableHead>
+                      <TableHead className="text-right text-rose-700">Disqualified</TableHead>
+                      <TableHead className="text-right text-gray-500">Spam</TableHead>
+                      <TableHead className="text-right text-gray-500">
+                        <ColHeaderHelp label="Unscored" help="Contact has no sales stage and no AI bucket yet — usually offline/imported leads or contacts without a message or call." />
+                      </TableHead>
+                      <TableHead className="text-right">Qualified Rate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sourceRows.map((r) => {
+                      const scored = r.qualified + r.disqualified + r.spam;
+                      const rate = scored > 0 ? r.qualified / scored : 0;
+                      return (
+                        <TableRow key={r.source}>
+                          <TableCell className="font-medium">{r.source}</TableCell>
+                          <TableCell className="text-right">{r.contacts}</TableCell>
+                          <TableCell className="text-right text-emerald-600 font-medium">{r.qualified || "—"}</TableCell>
+                          <TableCell className="text-right text-rose-600 font-medium">{r.disqualified || "—"}</TableCell>
+                          <TableCell className="text-right text-gray-500">{r.spam || "—"}</TableCell>
+                          <TableCell className="text-right text-gray-500">{(r.insufficient + r.unscored) || "—"}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {scored > 0 ? fmtPct(rate) : "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Per-campaign quality */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold">Campaign Quality Breakdown</CardTitle>
+            <CardTitle className="text-lg font-semibold">Paid Search Campaign Breakdown</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Contact quality grouped by Google Ads campaign for the selected month
+              Paid Search contacts grouped by Google Ads campaign (the only source with spend attribution).
             </p>
           </CardHeader>
           <CardContent>
