@@ -20,6 +20,7 @@ interface ContactsDialogProps {
 
 interface Contact {
   id: string;
+  record_id: string;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -31,6 +32,11 @@ interface Contact {
   hubspot_create_date: string | null;
   traffic_source_drill_down_1: string | null;
   traffic_source_drill_down_2: string | null;
+}
+
+interface LeadInfo {
+  lead_stage: string | null;
+  disqualification_reason: string | null;
 }
 
 interface CTMCall {
@@ -50,11 +56,22 @@ const leadStatusColors: Record<string, string> = {
   "Unqualified": "bg-gray-100 text-gray-600",
 };
 
-const getQualityLabel = (score: number | null): { label: string; color: string } => {
-  if (score === null) return { label: "Not scored", color: "bg-gray-100 text-gray-500" };
-  if (score >= 20) return { label: "High", color: "bg-emerald-100 text-emerald-800" };
-  if (score >= 10) return { label: "Medium", color: "bg-yellow-100 text-yellow-800" };
-  return { label: "Low", color: "bg-red-100 text-red-800" };
+const getLeadStageBadge = (lead: LeadInfo | undefined): { label: string; color: string } => {
+  const stage = lead?.lead_stage?.trim();
+  if (!stage) return { label: "No lead yet", color: "bg-gray-100 text-gray-500" };
+  const s = stage.toLowerCase();
+  if (s === "qualified") return { label: "Qualified", color: "bg-emerald-100 text-emerald-800" };
+  if (s === "connected") return { label: "In Progress", color: "bg-blue-100 text-blue-800" };
+  if (s === "disqualified") {
+    const reason = lead?.disqualification_reason?.trim();
+    if (reason && reason.toLowerCase() === "spam") {
+      return { label: "Spam", color: "bg-red-100 text-red-800" };
+    }
+    return { label: reason ? `Disqualified · ${reason}` : "Disqualified", color: "bg-red-100 text-red-700" };
+  }
+  if (s === "new") return { label: "New", color: "bg-amber-100 text-amber-800" };
+  if (s === "attempting") return { label: "Attempting", color: "bg-amber-100 text-amber-800" };
+  return { label: stage, color: "bg-gray-100 text-gray-700" };
 };
 
 // Normalize phone numbers for comparison (strip non-digits, handle +1 prefix)
@@ -68,13 +85,11 @@ const normalizePhone = (phone: string | null): string => {
 // Contact Card Component
 function ContactCard({ 
   contact, 
-  quality, 
-  statusColor, 
+  stageBadge, 
   matchedCalls 
 }: { 
   contact: Contact; 
-  quality: { label: string; color: string }; 
-  statusColor: string; 
+  stageBadge: { label: string; color: string }; 
   matchedCalls?: CTMCall[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -88,16 +103,9 @@ function ContactCard({
               <span className="font-medium text-gray-900 truncate">
                 {contact.first_name || ""} {contact.last_name || "Unknown"}
               </span>
-              <Badge variant="secondary" className={quality.color}>
-                {contact.quality_score !== null 
-                  ? `${quality.label} (${contact.quality_score})` 
-                  : quality.label}
+              <Badge variant="secondary" className={stageBadge.color}>
+                {stageBadge.label}
               </Badge>
-              {contact.lead_status && (
-                <Badge variant="secondary" className={statusColor}>
-                  {contact.lead_status}
-                </Badge>
-              )}
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               {contact.traffic_source_drill_down_1 && (
@@ -204,7 +212,7 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
     queryFn: async (): Promise<Contact[]> => {
       const { data, error } = await supabase
         .from("hubspot_contacts")
-        .select("id, first_name, last_name, email, phone_number, company_name, lead_status, quality_score, message, hubspot_create_date, traffic_source_drill_down_1, traffic_source_drill_down_2")
+        .select("id, record_id, first_name, last_name, email, phone_number, company_name, lead_status, quality_score, message, hubspot_create_date, traffic_source_drill_down_1, traffic_source_drill_down_2")
         .ilike("original_traffic_source", "Paid Search")
         .gte("hubspot_create_date", startDate.toISOString())
         .lte("hubspot_create_date", endDate.toISOString())
@@ -214,6 +222,29 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
       return data || [];
     },
     enabled: open,
+  });
+
+  // Fetch all leads and build a contact_id -> lead map
+  const { data: leads } = useQuery({
+    queryKey: ["month-leads", month],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hubspot_leads")
+        .select("associated_contact_id, lead_stage, disqualification_reason");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open,
+  });
+
+  const leadByContact = new Map<string, LeadInfo>();
+  leads?.forEach((l) => {
+    if (l.associated_contact_id && !leadByContact.has(l.associated_contact_id)) {
+      leadByContact.set(l.associated_contact_id, {
+        lead_stage: l.lead_stage,
+        disqualification_reason: l.disqualification_reason,
+      });
+    }
   });
 
   // Fetch CTM calls for the same period
@@ -269,8 +300,7 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
                 <p className="text-center text-gray-500 py-8">No contacts found for this month</p>
               ) : (
                 contacts?.map((contact) => {
-                  const quality = getQualityLabel(contact.quality_score);
-                  const statusColor = leadStatusColors[contact.lead_status || ""] || "bg-gray-100 text-gray-600";
+                  const stageBadge = getLeadStageBadge(leadByContact.get(contact.record_id));
                   
                   // Find matching calls by phone number
                   const normalizedContactPhone = normalizePhone(contact.phone_number);
@@ -280,8 +310,7 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
                     <ContactCard
                       key={contact.id}
                       contact={contact}
-                      quality={quality}
-                      statusColor={statusColor}
+                      stageBadge={stageBadge}
                       matchedCalls={matchedCalls}
                     />
                   );
