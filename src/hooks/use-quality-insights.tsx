@@ -29,6 +29,18 @@ export interface DisqualReason {
   source: "contact_ai" | "lead_sales";
 }
 
+export interface SourceQualityRow {
+  source: string;
+  contacts: number;
+  qualified: number;
+  disqualified: number;
+  spam: number;
+  insufficient: number;
+  unscored: number;
+  avgScore: number | null;
+  qualifiedRate: number;
+}
+
 const normalize = (name: string) => (name || "").toLowerCase().trim();
 
 export function useQualityInsights() {
@@ -55,10 +67,10 @@ export function useQualityInsights() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hubspot_contacts")
-        .select("record_id, traffic_source_drill_down_1, quality_score, quality_analysis, lifecycle_stage, lead_status")
-        .ilike("original_traffic_source", "Paid Search")
+        .select("record_id, original_traffic_source, traffic_source_drill_down_1, quality_score, quality_analysis, lifecycle_stage, lead_status")
         .gte("hubspot_create_date", startDate.toISOString())
-        .lte("hubspot_create_date", endDate.toISOString());
+        .lte("hubspot_create_date", endDate.toISOString())
+        .limit(5000);
       if (error) throw error;
       return data || [];
     },
@@ -130,25 +142,73 @@ export function useQualityInsights() {
   const contactDisqualReasons: Record<string, number> = {};
   const leadDisqualReasons: Record<string, number> = {};
 
+  // Source-level aggregation across ALL traffic sources
+  const bySource = new Map<string, SourceQualityRow>();
+  const sourceScoreSums = new Map<string, { sum: number; n: number }>();
+  const ensureSourceRow = (display: string): SourceQualityRow => {
+    let row = bySource.get(display);
+    if (!row) {
+      row = {
+        source: display,
+        contacts: 0,
+        qualified: 0,
+        disqualified: 0,
+        spam: 0,
+        insufficient: 0,
+        unscored: 0,
+        avgScore: null,
+        qualifiedRate: 0,
+      };
+      bySource.set(display, row);
+    }
+    return row;
+  };
+
+  const classify = (
+    leadStage: string | null | undefined,
+    qa: { bucket?: QualityBucket; reason?: string } | null
+  ): QualityBucket => {
+    if (leadStage) {
+      const s = leadStage.toLowerCase();
+      if (s.includes("disqualif") || s.includes("unqualif")) return "likely_disqualified";
+      if (s.includes("spam")) return "likely_spam";
+      if (s.includes("qualif")) return "likely_qualified";
+    }
+    if (qa?.bucket) return qa.bucket;
+    return "unscored";
+  };
+
   (contacts || []).forEach((c) => {
+    const sourceDisplay = c.original_traffic_source || "Unknown";
+    const srcRow = ensureSourceRow(sourceDisplay);
+    srcRow.contacts += 1;
+
+    const lead = leadByContact.get(c.record_id);
+    const qa = (c.quality_analysis as { bucket?: QualityBucket; reason?: string; source?: string } | null) || null;
+    const bucket = classify(lead?.stage, qa);
+
+    if (bucket === "likely_qualified") srcRow.qualified += 1;
+    else if (bucket === "likely_disqualified") srcRow.disqualified += 1;
+    else if (bucket === "likely_spam") srcRow.spam += 1;
+    else if (bucket === "insufficient_context") srcRow.insufficient += 1;
+    else srcRow.unscored += 1;
+
+    if (typeof c.quality_score === "number") {
+      const ss = sourceScoreSums.get(sourceDisplay) || { sum: 0, n: 0 };
+      ss.sum += c.quality_score;
+      ss.n += 1;
+      sourceScoreSums.set(sourceDisplay, ss);
+    }
+
+    // Paid Search → also drill into campaigns
+    const isPaid = (c.original_traffic_source || "").toLowerCase().includes("paid");
+    if (!isPaid) return;
+
     const display = c.traffic_source_drill_down_1 || "Unknown";
     const key = normalize(display);
     if (!displayNames.has(key)) displayNames.set(key, display);
     const row = ensureRow(key, displayNames.get(key) || display);
     row.contacts += 1;
-
-    // Prefer lead stage when present, else use AI bucket
-    const lead = leadByContact.get(c.record_id);
-    let bucket: QualityBucket = "unscored";
-    const qa = (c.quality_analysis as { bucket?: QualityBucket; reason?: string; source?: string } | null) || null;
-
-    if (lead?.stage) {
-      const s = lead.stage.toLowerCase();
-      if (s.includes("qualif") && !s.includes("dis")) bucket = "likely_qualified";
-      else if (s.includes("disqualif") || s.includes("unqualif")) bucket = "likely_disqualified";
-      else if (s.includes("spam")) bucket = "likely_spam";
-    }
-    if (bucket === "unscored" && qa?.bucket) bucket = qa.bucket;
 
     if (bucket === "likely_qualified") row.qualified += 1;
     else if (bucket === "likely_disqualified") row.disqualified += 1;
@@ -166,10 +226,24 @@ export function useQualityInsights() {
     if (bucket === "likely_disqualified" && qa?.reason) {
       contactDisqualReasons[qa.reason] = (contactDisqualReasons[qa.reason] || 0) + 1;
     }
-    if (lead?.disqual) {
-      leadDisqualReasons[lead.disqual] = (leadDisqualReasons[lead.disqual] || 0) + 1;
+  });
+
+  // Pull lead disqualification reasons from ALL leads in the month, not just paid search
+  (leads || []).forEach((l) => {
+    if (l.disqualification_reason) {
+      leadDisqualReasons[l.disqualification_reason] =
+        (leadDisqualReasons[l.disqualification_reason] || 0) + 1;
     }
   });
+
+  const sourceRows: SourceQualityRow[] = [];
+  bySource.forEach((row) => {
+    const ss = sourceScoreSums.get(row.source);
+    row.avgScore = ss && ss.n > 0 ? ss.sum / ss.n : null;
+    row.qualifiedRate = row.contacts > 0 ? row.qualified / row.contacts : 0;
+    sourceRows.push(row);
+  });
+  sourceRows.sort((a, b) => b.contacts - a.contacts);
 
   const rows: CampaignQualityRow[] = [];
   byCampaign.forEach((row, key) => {
@@ -206,6 +280,7 @@ export function useQualityInsights() {
   return {
     isLoading,
     rows,
+    sourceRows,
     totals,
     topContactReasons,
     topLeadReasons,
