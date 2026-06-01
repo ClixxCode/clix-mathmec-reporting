@@ -81,74 +81,81 @@ export interface QualityTrendRow {
 
 export function useQualityTrends() {
   return useQuery({
-    queryKey: ["quality-trends-paid-search"],
+    queryKey: ["quality-trends-paid-search-leads"],
     queryFn: async (): Promise<QualityTrendRow[]> => {
-      // Get only Paid Search contacts grouped by month
-      const { data: contacts, error } = await supabase
+      // Get Paid Search contacts (the universe for monthly totals)
+      const { data: contacts, error: cErr } = await supabase
         .from("hubspot_contacts")
-        .select("hubspot_create_date, lead_status, original_traffic_source")
+        .select("record_id, hubspot_create_date")
         .ilike("original_traffic_source", "Paid Search")
         .not("hubspot_create_date", "is", null)
         .order("hubspot_create_date", { ascending: false });
+      if (cErr) throw cErr;
 
-      if (error) throw error;
+      // Get all leads — used to layer lead stage onto contacts via associated_contact_id
+      const { data: leads, error: lErr } = await supabase
+        .from("hubspot_leads")
+        .select("associated_contact_id, lead_stage");
+      if (lErr) throw lErr;
 
-      // Group by month
-      const monthlyData: Record<string, { 
-        count: number; 
-        unqualifiedCount: number;
-        reviewedCount: number;
-      }> = {};
-
-      contacts?.forEach((contact) => {
-        if (!contact.hubspot_create_date) return;
-        
-        const date = new Date(contact.hubspot_create_date);
-        const monthKey = `${date.toLocaleString("default", { month: "short" })} ${date.getFullYear()}`;
-
-        if (!monthlyData[monthKey]) {
-          monthlyData[monthKey] = { count: 0, unqualifiedCount: 0, reviewedCount: 0 };
-        }
-
-        monthlyData[monthKey].count++;
-        
-        // Track lead status
-        const status = contact.lead_status?.toLowerCase();
-        if (status) {
-          monthlyData[monthKey].reviewedCount++;
-          if (status === "unqualified") {
-            monthlyData[monthKey].unqualifiedCount++;
+      // Map contact_id -> lead_stage (if any)
+      const leadByContact = new Map<string, string>();
+      leads?.forEach((l) => {
+        if (l.associated_contact_id && l.lead_stage) {
+          // Keep first seen; multiple leads per contact are rare
+          if (!leadByContact.has(l.associated_contact_id)) {
+            leadByContact.set(l.associated_contact_id, l.lead_stage);
           }
         }
       });
 
-      // Convert to array and sort by date (most recent first)
+      const monthlyData: Record<string, {
+        count: number;
+        qualified: number;
+        disqualified: number;
+        reviewedCount: number;
+      }> = {};
+
+      contacts?.forEach((c) => {
+        if (!c.hubspot_create_date) return;
+        const date = new Date(c.hubspot_create_date);
+        const monthKey = `${date.toLocaleString("default", { month: "short" })} ${date.getFullYear()}`;
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { count: 0, qualified: 0, disqualified: 0, reviewedCount: 0 };
+        }
+        monthlyData[monthKey].count++;
+
+        const stage = leadByContact.get(c.record_id);
+        if (!stage) return;
+        const s = stage.trim().toLowerCase();
+        // Qualified bucket: Qualified + Connected (In Progress)
+        if (s === "qualified" || s === "connected") {
+          monthlyData[monthKey].qualified++;
+          monthlyData[monthKey].reviewedCount++;
+        } else if (s === "disqualified") {
+          monthlyData[monthKey].disqualified++;
+          monthlyData[monthKey].reviewedCount++;
+        } else {
+          // New / Attempting — open, exclude from denominator
+          monthlyData[monthKey].reviewedCount++;
+        }
+      });
+
       const result = Object.entries(monthlyData)
-        .map(([month, data]) => {
-          // Qualification rate: (Total - Unqualified) / Total * 100
-          const qualificationRate = data.count > 0
-            ? Math.round(((data.count - data.unqualifiedCount) / data.count) * 100)
-            : 100;
-          
-          // Warning if more than 50% of contacts have no lead_status
-          const unreviewedPercent = data.count > 0 
-            ? ((data.count - data.reviewedCount) / data.count) * 100 
-            : 0;
-          
+        .map(([month, d]) => {
+          const denom = d.qualified + d.disqualified;
+          const qualificationRate = denom > 0 ? Math.round((d.qualified / denom) * 100) : 0;
+          const unreviewedPercent = d.count > 0 ? ((d.count - d.reviewedCount) / d.count) * 100 : 0;
           return {
             month,
-            totalContacts: data.count,
+            totalContacts: d.count,
             qualificationRate,
-            unqualifiedCount: data.unqualifiedCount,
-            reviewedCount: data.reviewedCount,
+            unqualifiedCount: d.disqualified,
+            reviewedCount: d.reviewedCount,
             dataQualityWarning: unreviewedPercent > 50,
           };
         })
-        .sort((a, b) => {
-          const dateA = new Date(a.month);
-          const dateB = new Date(b.month);
-          return dateB.getTime() - dateA.getTime();
-        });
+        .sort((a, b) => new Date(b.month).getTime() - new Date(a.month).getTime());
 
       return result;
     },
