@@ -120,7 +120,7 @@ function DashboardContent() {
               </div>
             </div>
             <div className="flex items-center gap-3 text-sm">
-              {view === "monthly" && <MonthSelector />}
+              {(view === "monthly" || view === "quality") && <MonthSelector />}
               {view === "monthly" && (
               <Button
                 onClick={handleDownloadPDF}
