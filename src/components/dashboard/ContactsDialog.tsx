@@ -238,7 +238,7 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
         .order("hubspot_create_date", { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as unknown as Contact[];
     },
     enabled: open,
   });
