@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import mathmecLogo from "@/assets/mathmec-logo.png";
 import { HubSpotContactsCard } from "@/components/admin/HubSpotContactsCard";
 import { HubSpotDealsCard } from "@/components/admin/HubSpotDealsCard";
+import { HubSpotLeadsCard } from "@/components/admin/HubSpotLeadsCard";
 import { CampaignNarrativeCard } from "@/components/admin/CampaignNarrativeCard";
 import { CTMStatusCard } from "@/components/admin/CTMStatusCard";
 import { GoogleAdsPerformanceCard } from "@/components/admin/GoogleAdsPerformanceCard";
@@ -67,6 +68,7 @@ export default function Admin() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <HubSpotContactsCard />
             <HubSpotDealsCard />
+            <HubSpotLeadsCard />
           </div>
         </section>
 
