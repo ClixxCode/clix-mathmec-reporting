@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.fetch-ctm-account]
 verify_jwt = false
+
+[functions.import-hubspot-leads]
+verify_jwt = false

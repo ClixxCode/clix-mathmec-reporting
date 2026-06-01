@@ -437,6 +437,66 @@ export type Database = {
         }
         Relationships: []
       }
+      hubspot_leads: {
+        Row: {
+          associated_contact_id: string | null
+          closed_won_amount: number | null
+          created_at: string
+          disqualification_reason: string | null
+          first_outreach_date: string | null
+          hubspot_create_date: string | null
+          id: string
+          lead_name: string | null
+          lead_owner: string | null
+          lead_source: string | null
+          lead_stage: string | null
+          open_deal_amount: number | null
+          product_requested: string | null
+          raw_data: Json
+          record_id: string
+          time_to_first_touch: string | null
+          updated_at: string
+        }
+        Insert: {
+          associated_contact_id?: string | null
+          closed_won_amount?: number | null
+          created_at?: string
+          disqualification_reason?: string | null
+          first_outreach_date?: string | null
+          hubspot_create_date?: string | null
+          id?: string
+          lead_name?: string | null
+          lead_owner?: string | null
+          lead_source?: string | null
+          lead_stage?: string | null
+          open_deal_amount?: number | null
+          product_requested?: string | null
+          raw_data?: Json
+          record_id: string
+          time_to_first_touch?: string | null
+          updated_at?: string
+        }
+        Update: {
+          associated_contact_id?: string | null
+          closed_won_amount?: number | null
+          created_at?: string
+          disqualification_reason?: string | null
+          first_outreach_date?: string | null
+          hubspot_create_date?: string | null
+          id?: string
+          lead_name?: string | null
+          lead_owner?: string | null
+          lead_source?: string | null
+          lead_stage?: string | null
+          open_deal_amount?: number | null
+          product_requested?: string | null
+          raw_data?: Json
+          record_id?: string
+          time_to_first_touch?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
