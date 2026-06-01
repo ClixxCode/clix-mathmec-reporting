@@ -89,7 +89,8 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const force: boolean = body?.force === true;
-    const limit: number = Math.min(Number(body?.limit) || 500, 1000);
+    const limit: number = Math.min(Number(body?.limit) || 120, 500);
+    const concurrency: number = Math.min(Math.max(Number(body?.concurrency) || 8, 1), 16);
 
     // Pull Paid Search contacts (only those with at least some context)
     const { data: contacts, error: cErr } = await supabase
@@ -140,10 +141,12 @@ serve(async (req) => {
 
     let scored = 0, skipped_insufficient = 0, failed = 0;
 
-    for (const c of candidates) {
+    const processOne = async (c: any) => {
       const phone = normalizePhone(c.phone_number);
       const callSummary = phone ? callByPhone.get(phone) || null : null;
-      const message = (c.message || "").trim() || null;
+      const rawMessage = (c.message || "").trim();
+      // Treat numeric-only messages (phone numbers, IDs) as no real message
+      const message = rawMessage && !/^\d{6,}$/.test(rawMessage) ? rawMessage : null;
 
       let result: { bucket: string; reason: string } | null;
       if (!message && !callSummary) {
@@ -155,10 +158,10 @@ serve(async (req) => {
           call_summary: callSummary,
           product: productByContact.get(c.record_id) || null,
         });
-        if (!result) { failed++; continue; }
+        if (!result) { failed++; return; }
       }
 
-      const update: Record<string, unknown> = {
+      const update = {
         quality_score: BUCKET_SCORES[result.bucket],
         quality_analysis: {
           source: "ai_inferred",
@@ -170,8 +173,14 @@ serve(async (req) => {
         },
       };
       const { error: uErr } = await supabase.from("hubspot_contacts").update(update).eq("record_id", c.record_id);
-      if (uErr) { console.error("update failed", c.record_id, uErr.message); failed++; continue; }
+      if (uErr) { console.error("update failed", c.record_id, uErr.message); failed++; return; }
       scored++;
+    };
+
+    // Process in parallel chunks
+    for (let i = 0; i < candidates.length; i += concurrency) {
+      const chunk = candidates.slice(i, i + concurrency);
+      await Promise.allSettled(chunk.map(processOne));
     }
 
     return new Response(JSON.stringify({
@@ -182,6 +191,13 @@ serve(async (req) => {
         skipped_insufficient,
         failed,
         total_paid_search: contacts?.length || 0,
+        remaining: Math.max(0, (contacts?.filter((c) => {
+          const stage = stageByContact.get(c.record_id);
+          if (stage && definitive.has(stage)) return false;
+          const qa = c.quality_analysis as any;
+          if (qa && qa.source === "ai_inferred" && qa.bucket && qa.bucket !== "insufficient_context") return false;
+          return true;
+        }).length || 0) - scored - skipped_insufficient),
       },
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
