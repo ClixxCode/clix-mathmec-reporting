@@ -264,14 +264,16 @@ export function ContactsDialog({ open, onOpenChange, month }: ContactsDialogProp
   const handleAiScore = async () => {
     setIsScoring(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-score-contacts", { body: { force: true } });
+      const { data, error } = await supabase.functions.invoke("ai-score-contacts", {
+        body: { force: true, startDate: startDate.toISOString(), endDate: endDate.toISOString() },
+      });
       if (error) throw error;
       const s = data?.summary || {};
       toast({
         title: "AI scoring complete",
         description: `${s.scored ?? 0} scored · ${s.skipped_insufficient ?? 0} insufficient · ${s.failed ?? 0} failed · ${s.remaining ?? 0} remaining. Click again to continue if remaining > 0.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["month-contacts", month] });
+      await queryClient.invalidateQueries({ queryKey: ["month-contacts", month] });
     } catch (e) {
       toast({
         title: "AI scoring failed",
