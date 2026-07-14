@@ -23,6 +23,7 @@ interface DealWithContact {
   deal_stage: string | null;
   amount: number | null;
   create_date: string | null;
+  close_date: string | null;
   associated_contact_id: string | null;
   contact_name: string | null;
   contact_create_date: string | null;
@@ -51,14 +52,19 @@ export function DealsDialog({ open, onOpenChange, month, wonOnly = false }: Deal
       const startDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
       const endDate = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
 
-      // Fetch deals
-      const { data: dealsData, error: dealsError } = await supabase
+      // Pipeline view = deals created this month.
+      // Won view = deals CLOSED WON this month (by close_date).
+      const dateCol = wonOnly ? "close_date" : "create_date";
+      let query = supabase
         .from("hubspot_deals")
-        .select("id, deal_name, deal_stage, amount, create_date, associated_contact_id, traffic_source_drill_down_1, traffic_source_drill_down_2")
-        .gte("create_date", startDate.toISOString())
-        .lte("create_date", endDate.toISOString())
-        .order("create_date", { ascending: false });
-
+        .select("id, deal_name, deal_stage, amount, create_date, close_date, associated_contact_id, traffic_source_drill_down_1, traffic_source_drill_down_2")
+        .gte(dateCol, startDate.toISOString())
+        .lte(dateCol, endDate.toISOString())
+        .order(dateCol, { ascending: false });
+      if (wonOnly) {
+        query = query.ilike("deal_stage", "%won%");
+      }
+      const { data: dealsData, error: dealsError } = await query;
       if (dealsError) throw dealsError;
 
       // Get unique contact IDs
@@ -102,6 +108,7 @@ export function DealsDialog({ open, onOpenChange, month, wonOnly = false }: Deal
           deal_stage: deal.deal_stage,
           amount: deal.amount,
           create_date: deal.create_date,
+          close_date: deal.close_date,
           associated_contact_id: deal.associated_contact_id,
           contact_name: contact?.name || null,
           contact_create_date: contact?.create_date || null,
@@ -110,9 +117,7 @@ export function DealsDialog({ open, onOpenChange, month, wonOnly = false }: Deal
           keyword: deal.traffic_source_drill_down_2 || null,
         };
       });
-      return wonOnly
-        ? mapped.filter((d) => (d.deal_stage || "").toLowerCase().includes("won"))
-        : mapped;
+      return mapped;
     },
     enabled: open,
   });
