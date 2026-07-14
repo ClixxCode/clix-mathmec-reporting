@@ -14,6 +14,7 @@ interface DealsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   month: string; // e.g., "Jan 2026"
+  wonOnly?: boolean;
 }
 
 interface DealWithContact {
@@ -40,9 +41,9 @@ const stageColors: Record<string, string> = {
   "Negotiation": "bg-amber-100 text-amber-800",
 };
 
-export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
+export function DealsDialog({ open, onOpenChange, month, wonOnly = false }: DealsDialogProps) {
   const { data: deals, isLoading } = useQuery({
-    queryKey: ["month-deals-with-contacts", month],
+    queryKey: ["month-deals-with-contacts", month, wonOnly],
     queryFn: async (): Promise<DealWithContact[]> => {
       // Parse month string like "Jan 2026" to date range
       const [monthName, year] = month.split(" ");
@@ -85,7 +86,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
       }
 
       // Combine deals with contact info
-      return (dealsData || []).map(deal => {
+      const mapped = (dealsData || []).map(deal => {
         const contact = deal.associated_contact_id ? contactsMap[deal.associated_contact_id] : null;
         let daysToDeeal: number | null = null;
         
@@ -109,6 +110,9 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
           keyword: deal.traffic_source_drill_down_2 || null,
         };
       });
+      return wonOnly
+        ? mapped.filter((d) => (d.deal_stage || "").toLowerCase().includes("won"))
+        : mapped;
     },
     enabled: open,
   });
@@ -132,7 +136,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
       <DialogContent className="max-w-7xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="text-xl">
-            Deals — {month}
+            {wonOnly ? `Won Deals — ${month}` : `Deals — ${month}`}
           </DialogTitle>
         </DialogHeader>
         
@@ -143,6 +147,40 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
         ) : (
           <>
             {/* Summary Cards */}
+            {wonOnly ? (
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-100">
+                  <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide mb-1">Won Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(deals?.reduce((sum, d) => sum + (d.amount || 0), 0) || 0)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{deals?.length || 0} deals won</p>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <p className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Avg Deal Size</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(
+                      deals && deals.length > 0
+                        ? (deals.reduce((sum, d) => sum + (d.amount || 0), 0) / deals.length)
+                        : 0
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Per won deal</p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                  <p className="text-xs font-medium text-purple-600 uppercase tracking-wide mb-1">Avg Days to Win</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {(() => {
+                      const withDays = (deals || []).filter((d) => d.days_to_deal !== null);
+                      if (withDays.length === 0) return "—";
+                      const avg = withDays.reduce((s, d) => s + (d.days_to_deal || 0), 0) / withDays.length;
+                      return `${Math.round(avg)}d`;
+                    })()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Contact → won</p>
+                </div>
+              </div>
+            ) : (
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                 <p className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Pipeline Value</p>
@@ -164,6 +202,7 @@ export function DealsDialog({ open, onOpenChange, month }: DealsDialogProps) {
                 </p>
               </div>
             </div>
+            )}
 
             <ScrollArea className="h-[50vh]">
               <table className="w-full text-sm">
