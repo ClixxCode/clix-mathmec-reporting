@@ -78,6 +78,13 @@ async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
     ),
   ]);
 
+  // Won revenue = deals CLOSED WON in this quarter (by close_date), regardless of when created.
+  const wonDealsClosed = await fetchAll<DealRow>(
+    "hubspot_deals",
+    "deal_id, deal_name, amount, deal_stage, create_date, original_traffic_source",
+    "close_date"
+  );
+
   const { data: adsData, error: adsErr } = await supabase
     .from("google_ads_performance")
     .select("cost")
@@ -85,7 +92,7 @@ async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
     .lt("date", end);
   if (adsErr) throw adsErr;
   const adSpend = (adsData || []).reduce((s, r) => s + (Number(r.cost) || 0), 0);
-  const wonRevenue = deals
+  const wonRevenue = wonDealsClosed
     .filter((d) => (d.deal_stage || "").toLowerCase().includes("won"))
     .reduce((s, d) => s + (Number(d.amount) || 0), 0);
 
