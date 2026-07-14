@@ -476,8 +476,8 @@ function buildMonthly(qCurr: QuarterStats, qPrev: QuarterStats, cfg: QuarterConf
   };
   const currYear = cfg.currStart.slice(0, 4);
   const prevYear = cfg.prevStart.slice(0, 4);
-  const cCurr = bucket(qCurr.contacts.map((c) => ({ date: c.hubspot_create_date })));
-  const cPrev = bucket(qPrev.contacts.map((c) => ({ date: c.hubspot_create_date })));
+  const cCurr = bucket(qCurr.paidContacts.map((c) => ({ date: c.hubspot_create_date })));
+  const cPrev = bucket(qPrev.paidContacts.map((c) => ({ date: c.hubspot_create_date })));
   const pCurr = sumBucket(qCurr.deals);
   const pPrev = sumBucket(qPrev.deals);
   return {
