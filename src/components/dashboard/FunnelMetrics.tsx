@@ -237,6 +237,7 @@ export function FunnelMetrics() {
   const [showConversionBreakdown, setShowConversionBreakdown] = useState(false);
   const [showContactsDialog, setShowContactsDialog] = useState(false);
   const [showDealsDialog, setShowDealsDialog] = useState(false);
+  const [showWonDialog, setShowWonDialog] = useState(false);
   const [showFormsDialog, setShowFormsDialog] = useState(false);
   const [showCallsDialog, setShowCallsDialog] = useState(false);
 
@@ -357,6 +358,8 @@ export function FunnelMetrics() {
           isLoading={metrics.isLoading}
           infoKey="won"
           subtitleInfoKey="winRate"
+          isClickable
+          onClick={() => setShowWonDialog(true)}
         />
         <FunnelConnector variant="green" />
         <FunnelCard
@@ -379,6 +382,12 @@ export function FunnelMetrics() {
         open={showDealsDialog}
         onOpenChange={setShowDealsDialog}
         month={currentMonth}
+      />
+      <DealsDialog
+        open={showWonDialog}
+        onOpenChange={setShowWonDialog}
+        month={currentMonth}
+        wonOnly
       />
       <FormsDialog
         open={showFormsDialog}
