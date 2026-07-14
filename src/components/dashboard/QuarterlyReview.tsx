@@ -116,7 +116,7 @@ function pctChange(curr: number, prev: number) {
 }
 
 function ComparisonCard({
-  label, icon: Icon, current, previous, format, onClick,
+  label, icon: Icon, current, previous, format, onClick, currentLabel, previousLabel,
 }: {
   label: string;
   icon: any;
@@ -124,6 +124,8 @@ function ComparisonCard({
   previous: number;
   format: (n: number) => string;
   onClick?: () => void;
+  currentLabel: string;
+  previousLabel: string;
 }) {
   const change = pctChange(current, previous);
   const positive = change >= 0;
@@ -152,11 +154,11 @@ function ComparisonCard({
       </div>
       <div className="space-y-3">
         <div>
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Q1 2026</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{currentLabel}</div>
           <div className="text-3xl font-bold text-foreground">{format(current)}</div>
         </div>
         <div className="pt-3 border-t border-border">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Q1 2025</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{previousLabel}</div>
           <div className="text-lg font-semibold text-muted-foreground">{format(previous)}</div>
         </div>
       </div>
@@ -164,69 +166,131 @@ function ComparisonCard({
   );
 }
 
+type QuarterKey = "2026Q1" | "2026Q2";
+
+interface QuarterConfig {
+  key: QuarterKey;
+  label: string;         // e.g. "Q2 2026"
+  prevLabel: string;     // e.g. "Q2 2025"
+  currStart: string;
+  currEnd: string;       // exclusive
+  prevStart: string;
+  prevEnd: string;       // exclusive
+  months: string[];      // 3 short month names
+  monthOffset: number;   // 0=Jan-Mar, 3=Apr-Jun...
+}
+
+const QUARTERS: Record<QuarterKey, QuarterConfig> = {
+  "2026Q1": {
+    key: "2026Q1",
+    label: "Q1 2026",
+    prevLabel: "Q1 2025",
+    currStart: "2026-01-01",
+    currEnd: "2026-04-01",
+    prevStart: "2025-01-01",
+    prevEnd: "2025-04-01",
+    months: ["Jan", "Feb", "Mar"],
+    monthOffset: 0,
+  },
+  "2026Q2": {
+    key: "2026Q2",
+    label: "Q2 2026",
+    prevLabel: "Q2 2025",
+    currStart: "2026-04-01",
+    currEnd: "2026-07-01",
+    prevStart: "2025-04-01",
+    prevEnd: "2025-07-01",
+    months: ["Apr", "May", "Jun"],
+    monthOffset: 3,
+  },
+};
+
 export function QuarterlyReview() {
-  const { data: q1_2026 } = useQuery({
-    queryKey: ["quarter", "2026Q1"],
-    queryFn: () => fetchQuarter("2026-01-01", "2026-04-01"),
+  const [quarterKey, setQuarterKey] = useState<QuarterKey>("2026Q2");
+  const cfg = QUARTERS[quarterKey];
+
+  const { data: qCurr } = useQuery({
+    queryKey: ["quarter", cfg.key],
+    queryFn: () => fetchQuarter(cfg.currStart, cfg.currEnd),
   });
-  const { data: q1_2025 } = useQuery({
-    queryKey: ["quarter", "2025Q1"],
-    queryFn: () => fetchQuarter("2025-01-01", "2025-04-01"),
+  const { data: qPrev } = useQuery({
+    queryKey: ["quarter", cfg.prevLabel],
+    queryFn: () => fetchQuarter(cfg.prevStart, cfg.prevEnd),
   });
 
   const [drill, setDrill] = useState<null | "contacts" | "paid" | "pipeline" | "deals">(null);
 
-  if (!q1_2026 || !q1_2025) {
-    return <div className="text-muted-foreground text-sm">Loading quarterly comparison…</div>;
+  const quarterTabs: QuarterKey[] = ["2026Q1", "2026Q2"];
+
+  if (!qCurr || !qPrev) {
+    return (
+      <div className="space-y-4">
+        <QuarterTabs value={quarterKey} onChange={setQuarterKey} options={quarterTabs} />
+        <div className="text-muted-foreground text-sm">Loading quarterly comparison…</div>
+      </div>
+    );
   }
 
   const sources = Array.from(
-    new Set([...Object.keys(q1_2026.bySource), ...Object.keys(q1_2025.bySource)])
-  ).sort((a, b) => (q1_2026.bySource[b] ?? 0) - (q1_2026.bySource[a] ?? 0));
+    new Set([...Object.keys(qCurr.bySource), ...Object.keys(qPrev.bySource)])
+  ).sort((a, b) => (qCurr.bySource[b] ?? 0) - (qCurr.bySource[a] ?? 0));
 
-  const monthlyData = buildMonthly(q1_2026, q1_2025);
+  const monthlyData = buildMonthly(qCurr, qPrev, cfg);
+  const currYear = cfg.currStart.slice(0, 4);
+  const prevYear = cfg.prevStart.slice(0, 4);
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Q1 2026 vs Q1 2025</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Year-over-year comparison across contacts and pipeline.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">{cfg.label} vs {cfg.prevLabel}</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Year-over-year comparison across contacts and pipeline.
+          </p>
+        </div>
+        <QuarterTabs value={quarterKey} onChange={setQuarterKey} options={quarterTabs} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <ComparisonCard
           label="Total Contacts"
           icon={Users}
-          current={q1_2026.contacts.length}
-          previous={q1_2025.contacts.length}
+          current={qCurr.contacts.length}
+          previous={qPrev.contacts.length}
           format={(n) => n.toLocaleString()}
           onClick={() => setDrill("contacts")}
+          currentLabel={cfg.label}
+          previousLabel={cfg.prevLabel}
         />
         <ComparisonCard
           label="Paid Search Contacts"
           icon={TrendingUp}
-          current={q1_2026.paidContacts.length}
-          previous={q1_2025.paidContacts.length}
+          current={qCurr.paidContacts.length}
+          previous={qPrev.paidContacts.length}
           format={(n) => n.toLocaleString()}
           onClick={() => setDrill("paid")}
+          currentLabel={cfg.label}
+          previousLabel={cfg.prevLabel}
         />
         <ComparisonCard
           label="Pipeline Value"
           icon={DollarSign}
-          current={q1_2026.pipeline}
-          previous={q1_2025.pipeline}
+          current={qCurr.pipeline}
+          previous={qPrev.pipeline}
           format={fmtMoney}
           onClick={() => setDrill("pipeline")}
+          currentLabel={cfg.label}
+          previousLabel={cfg.prevLabel}
         />
         <ComparisonCard
           label="Deals Created"
           icon={Briefcase}
-          current={q1_2026.deals.length}
-          previous={q1_2025.deals.length}
+          current={qCurr.deals.length}
+          previous={qPrev.deals.length}
           format={(n) => n.toLocaleString()}
           onClick={() => setDrill("deals")}
+          currentLabel={cfg.label}
+          previousLabel={cfg.prevLabel}
         />
       </div>
 
@@ -235,19 +299,22 @@ export function QuarterlyReview() {
           title="Contacts by Month"
           data={monthlyData.contacts}
           format={(n) => n.toLocaleString()}
+          prevYear={prevYear}
+          currYear={currYear}
         />
         <MonthlyBarChart
           title="Pipeline Value by Month"
           data={monthlyData.pipeline}
           format={fmtMoney}
+          prevYear={prevYear}
+          currYear={currYear}
         />
       </div>
 
       <InvestmentSection
-        q2026={q1_2026}
-        q2025={q1_2025}
-        range2026={{ start: new Date(Date.UTC(2026, 0, 1)), end: new Date(Date.UTC(2026, 3, 1)) }}
-        range2025={{ start: new Date(Date.UTC(2025, 0, 1)), end: new Date(Date.UTC(2025, 3, 1)) }}
+        qCurr={qCurr}
+        qPrev={qPrev}
+        cfg={cfg}
       />
 
       <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
@@ -257,15 +324,15 @@ export function QuarterlyReview() {
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                 <th className="py-2 pr-4 font-medium">Source</th>
-                <th className="py-2 px-4 font-medium text-right">Q1 2025</th>
-                <th className="py-2 px-4 font-medium text-right">Q1 2026</th>
+                <th className="py-2 px-4 font-medium text-right">{cfg.prevLabel}</th>
+                <th className="py-2 px-4 font-medium text-right">{cfg.label}</th>
                 <th className="py-2 pl-4 font-medium text-right">Change</th>
               </tr>
             </thead>
             <tbody>
               {sources.map((src) => {
-                const prev = q1_2025.bySource[src] ?? 0;
-                const curr = q1_2026.bySource[src] ?? 0;
+                const prev = qPrev.bySource[src] ?? 0;
+                const curr = qCurr.bySource[src] ?? 0;
                 const change = pctChange(curr, prev);
                 const positive = change >= 0;
                 return (
@@ -294,20 +361,49 @@ export function QuarterlyReview() {
       <DrillDialog
         drill={drill}
         onClose={() => setDrill(null)}
-        q2026={q1_2026}
-        q2025={q1_2025}
+        qCurr={qCurr}
+        qPrev={qPrev}
+        cfg={cfg}
       />
     </div>
   );
 }
 
+function QuarterTabs({
+  value, onChange, options,
+}: {
+  value: QuarterKey;
+  onChange: (v: QuarterKey) => void;
+  options: QuarterKey[];
+}) {
+  return (
+    <div className="inline-flex rounded-lg border border-border bg-card p-1 shadow-sm">
+      {options.map((k) => (
+        <button
+          key={k}
+          onClick={() => onChange(k)}
+          className={cn(
+            "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+            value === k
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {QUARTERS[k].label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function DrillDialog({
-  drill, onClose, q2026, q2025,
+  drill, onClose, qCurr, qPrev, cfg,
 }: {
   drill: null | "contacts" | "paid" | "pipeline" | "deals";
   onClose: () => void;
-  q2026: QuarterStats;
-  q2025: QuarterStats;
+  qCurr: QuarterStats;
+  qPrev: QuarterStats;
+  cfg: QuarterConfig;
 }) {
   const open = drill !== null;
 
@@ -318,24 +414,24 @@ function DrillDialog({
   if (drill === "contacts" || drill === "paid") {
     const isPaid = drill === "paid";
     title = isPaid ? "Paid Search Contacts" : "All Contacts";
-    description = "Q1 2026 vs Q1 2025 — click an email to follow up.";
-    const curr = isPaid ? q2026.paidContacts : q2026.contacts;
-    const prev = isPaid ? q2025.paidContacts : q2025.contacts;
+    description = `${cfg.label} vs ${cfg.prevLabel} — click an email to follow up.`;
+    const curr = isPaid ? qCurr.paidContacts : qCurr.contacts;
+    const prev = isPaid ? qPrev.paidContacts : qPrev.contacts;
     content = (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ContactList title={`Q1 2026 (${curr.length})`} rows={curr} />
-        <ContactList title={`Q1 2025 (${prev.length})`} rows={prev} />
+        <ContactList title={`${cfg.label} (${curr.length})`} rows={curr} />
+        <ContactList title={`${cfg.prevLabel} (${prev.length})`} rows={prev} />
       </div>
     );
   } else if (drill === "pipeline" || drill === "deals") {
     title = drill === "pipeline" ? "Pipeline Value Detail" : "Deals Created";
-    description = "Q1 2026 vs Q1 2025 — sorted by amount.";
-    const curr = [...q2026.deals].sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0));
-    const prev = [...q2025.deals].sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0));
+    description = `${cfg.label} vs ${cfg.prevLabel} — sorted by amount.`;
+    const curr = [...qCurr.deals].sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0));
+    const prev = [...qPrev.deals].sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0));
     content = (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DealList title={`Q1 2026 (${curr.length} • ${fmtMoney(q2026.pipeline)})`} rows={curr} />
-        <DealList title={`Q1 2025 (${prev.length} • ${fmtMoney(q2025.pipeline)})`} rows={prev} />
+        <DealList title={`${cfg.label} (${curr.length} • ${fmtMoney(qCurr.pipeline)})`} rows={curr} />
+        <DealList title={`${cfg.prevLabel} (${prev.length} • ${fmtMoney(qPrev.pipeline)})`} rows={prev} />
       </div>
     );
   }
@@ -355,14 +451,16 @@ function DrillDialog({
   );
 }
 
-function buildMonthly(q2026: QuarterStats, q2025: QuarterStats) {
-  const months = ["Jan", "Feb", "Mar"];
+function buildMonthly(qCurr: QuarterStats, qPrev: QuarterStats, cfg: QuarterConfig) {
+  const months = cfg.months;
+  const offset = cfg.monthOffset;
   const bucket = <T extends { date: string | null }>(rows: T[]) => {
     const out = [0, 0, 0];
     for (const r of rows) {
       if (!r.date) continue;
       const m = new Date(r.date).getUTCMonth();
-      if (m >= 0 && m <= 2) out[m] += 1;
+      const idx = m - offset;
+      if (idx >= 0 && idx <= 2) out[idx] += 1;
     }
     return out;
   };
@@ -371,26 +469,31 @@ function buildMonthly(q2026: QuarterStats, q2025: QuarterStats) {
     for (const d of rows) {
       if (!d.create_date) continue;
       const m = new Date(d.create_date).getUTCMonth();
-      if (m >= 0 && m <= 2) out[m] += Number(d.amount) || 0;
+      const idx = m - offset;
+      if (idx >= 0 && idx <= 2) out[idx] += Number(d.amount) || 0;
     }
     return out;
   };
-  const c2026 = bucket(q2026.contacts.map((c) => ({ date: c.hubspot_create_date })));
-  const c2025 = bucket(q2025.contacts.map((c) => ({ date: c.hubspot_create_date })));
-  const p2026 = sumBucket(q2026.deals);
-  const p2025 = sumBucket(q2025.deals);
+  const currYear = cfg.currStart.slice(0, 4);
+  const prevYear = cfg.prevStart.slice(0, 4);
+  const cCurr = bucket(qCurr.contacts.map((c) => ({ date: c.hubspot_create_date })));
+  const cPrev = bucket(qPrev.contacts.map((c) => ({ date: c.hubspot_create_date })));
+  const pCurr = sumBucket(qCurr.deals);
+  const pPrev = sumBucket(qPrev.deals);
   return {
-    contacts: months.map((m, i) => ({ month: m, "2025": c2025[i], "2026": c2026[i] })),
-    pipeline: months.map((m, i) => ({ month: m, "2025": p2025[i], "2026": p2026[i] })),
+    contacts: months.map((m, i) => ({ month: m, [prevYear]: cPrev[i], [currYear]: cCurr[i] })),
+    pipeline: months.map((m, i) => ({ month: m, [prevYear]: pPrev[i], [currYear]: pCurr[i] })),
   };
 }
 
 function MonthlyBarChart({
-  title, data, format,
+  title, data, format, prevYear, currYear,
 }: {
   title: string;
-  data: Array<{ month: string; "2025": number; "2026": number }>;
+  data: Array<Record<string, string | number>>;
   format: (n: number) => string;
+  prevYear: string;
+  currYear: string;
 }) {
   return (
     <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
@@ -403,8 +506,8 @@ function MonthlyBarChart({
             <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => format(Number(v))} width={80} />
             <Tooltip formatter={(v: number) => format(Number(v))} />
             <Legend />
-            <Bar dataKey="2025" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="2026" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey={prevYear} fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey={currYear} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -420,23 +523,24 @@ function fmtDate(s: string | null) {
 }
 
 function InvestmentSection({
-  q2026, q2025, range2026, range2025,
+  qCurr, qPrev, cfg,
 }: {
-  q2026: QuarterStats;
-  q2025: QuarterStats;
-  range2026: { start: Date; end: Date };
-  range2025: { start: Date; end: Date };
+  qCurr: QuarterStats;
+  qPrev: QuarterStats;
+  cfg: QuarterConfig;
 }) {
-  const fee2026 = managementFeeBetween(range2026.start, range2026.end);
-  const fee2025 = managementFeeBetween(range2025.start, range2025.end);
-  const inv2026 = q2026.adSpend + fee2026;
-  const inv2025 = q2025.adSpend + fee2025;
-  const roas2026 = inv2026 > 0 ? q2026.wonRevenue / inv2026 : 0;
-  const roas2025 = inv2025 > 0 ? q2025.wonRevenue / inv2025 : 0;
-  const pipe2026 = inv2026 > 0 ? q2026.pipeline / inv2026 : 0;
-  const pipe2025 = inv2025 > 0 ? q2025.pipeline / inv2025 : 0;
-  const cpc2026 = q2026.paidContacts.length > 0 ? inv2026 / q2026.paidContacts.length : 0;
-  const cpc2025 = q2025.paidContacts.length > 0 ? inv2025 / q2025.paidContacts.length : 0;
+  const rangeCurr = { start: new Date(cfg.currStart + "T00:00:00Z"), end: new Date(cfg.currEnd + "T00:00:00Z") };
+  const rangePrev = { start: new Date(cfg.prevStart + "T00:00:00Z"), end: new Date(cfg.prevEnd + "T00:00:00Z") };
+  const feeCurr = managementFeeBetween(rangeCurr.start, rangeCurr.end);
+  const feePrev = managementFeeBetween(rangePrev.start, rangePrev.end);
+  const invCurr = qCurr.adSpend + feeCurr;
+  const invPrev = qPrev.adSpend + feePrev;
+  const roasCurr = invCurr > 0 ? qCurr.wonRevenue / invCurr : 0;
+  const roasPrev = invPrev > 0 ? qPrev.wonRevenue / invPrev : 0;
+  const pipeCurr = invCurr > 0 ? qCurr.pipeline / invCurr : 0;
+  const pipePrev = invPrev > 0 ? qPrev.pipeline / invPrev : 0;
+  const cpcCurr = qCurr.paidContacts.length > 0 ? invCurr / qCurr.paidContacts.length : 0;
+  const cpcPrev = qPrev.paidContacts.length > 0 ? invPrev / qPrev.paidContacts.length : 0;
 
   const fmtPct = (curr: number, prev: number, lowerIsBetter = false) => {
     if (!prev) return { text: curr > 0 ? "—" : "—", positive: true, neutral: true };
@@ -450,19 +554,19 @@ function InvestmentSection({
   };
 
   const rows = [
-    { label: "Total Investment", a: fmtUSD(inv2025), b: fmtUSD(inv2026),
-      change: fmtPct(inv2026, inv2025, true),
-      sub: `Ads + Mgmt fee (Q1 2025 fee: ${fmtUSD(fee2025)} • Q1 2026 fee: ${fmtUSD(fee2026)})` },
-    { label: "Won Revenue", a: fmtUSD(q2025.wonRevenue), b: fmtUSD(q2026.wonRevenue),
-      change: fmtPct(q2026.wonRevenue, q2025.wonRevenue) },
-    { label: "ROAS (Won ÷ Investment)", a: `${roas2025.toFixed(2)}x`, b: `${roas2026.toFixed(2)}x`,
-      change: fmtPct(roas2026, roas2025) },
-    { label: "Pipeline ÷ Investment", a: `${pipe2025.toFixed(2)}x`, b: `${pipe2026.toFixed(2)}x`,
-      change: fmtPct(pipe2026, pipe2025) },
+    { label: "Total Investment", a: fmtUSD(invPrev), b: fmtUSD(invCurr),
+      change: fmtPct(invCurr, invPrev, true),
+      sub: `Ads + Mgmt fee (${cfg.prevLabel} fee: ${fmtUSD(feePrev)} • ${cfg.label} fee: ${fmtUSD(feeCurr)})` },
+    { label: "Won Revenue", a: fmtUSD(qPrev.wonRevenue), b: fmtUSD(qCurr.wonRevenue),
+      change: fmtPct(qCurr.wonRevenue, qPrev.wonRevenue) },
+    { label: "ROAS (Won ÷ Investment)", a: `${roasPrev.toFixed(2)}x`, b: `${roasCurr.toFixed(2)}x`,
+      change: fmtPct(roasCurr, roasPrev) },
+    { label: "Pipeline ÷ Investment", a: `${pipePrev.toFixed(2)}x`, b: `${pipeCurr.toFixed(2)}x`,
+      change: fmtPct(pipeCurr, pipePrev) },
     { label: "Cost per Paid Search Contact",
-      a: cpc2025 > 0 ? fmtUSD(cpc2025) : "—",
-      b: cpc2026 > 0 ? fmtUSD(cpc2026) : "—",
-      change: fmtPct(cpc2026, cpc2025, true) },
+      a: cpcPrev > 0 ? fmtUSD(cpcPrev) : "—",
+      b: cpcCurr > 0 ? fmtUSD(cpcCurr) : "—",
+      change: fmtPct(cpcCurr, cpcPrev, true) },
   ];
 
   return (
@@ -470,15 +574,15 @@ function InvestmentSection({
       <h3 className="font-semibold text-foreground text-lg mb-1">Investment & Returns</h3>
       <p className="text-xs text-muted-foreground mb-4">
         Investment = Google Ads spend + Mathews management fee ($1,750/month from Nov 2025; $1,355.04 for Oct 2025).
-        No management fee applied to Q1 2025 (engagement began Oct 2025).
+        No management fee applied to quarters before Oct 2025 (engagement began Oct 2025).
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
               <th className="py-2 pr-4 font-medium">Metric</th>
-              <th className="py-2 px-4 font-medium text-right">Q1 2025</th>
-              <th className="py-2 px-4 font-medium text-right">Q1 2026</th>
+              <th className="py-2 px-4 font-medium text-right">{cfg.prevLabel}</th>
+              <th className="py-2 px-4 font-medium text-right">{cfg.label}</th>
               <th className="py-2 pl-4 font-medium text-right">Change</th>
             </tr>
           </thead>
