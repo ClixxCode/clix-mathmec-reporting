@@ -195,7 +195,7 @@ export function DealsDialog({ open, onOpenChange, month, wonOnly = false }: Deal
                 <p className="text-xs text-gray-500 mt-1">{deals?.length || 0} deals</p>
               </div>
               <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-100">
-                <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide mb-1">Closed Won</p>
+                <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide mb-1">Won From This Cohort</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {formatCurrency(
                     deals?.filter(d => d.deal_stage?.toLowerCase().includes("won"))
@@ -203,7 +203,7 @@ export function DealsDialog({ open, onOpenChange, month, wonOnly = false }: Deal
                   )}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {deals?.filter(d => d.deal_stage?.toLowerCase().includes("won")).length || 0} won
+                  {deals?.filter(d => d.deal_stage?.toLowerCase().includes("won")).length || 0} deals from this cohort have since won
                 </p>
               </div>
             </div>
