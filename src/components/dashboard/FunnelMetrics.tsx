@@ -20,12 +20,12 @@ const metricDefinitions: Record<string, string> = {
   cpc: "Average cost per click: Total Cost ÷ Clicks.",
   conversions: "Google Ads tracked conversion actions. This is the master number from Google's tracking pixel.",
   conversionRate: "Conversions ÷ Clicks. How often clicks turn into tracked conversions.",
-  contacts: "Contacts from Paid Search sources in HubSpot for the selected month.",
-  deals: "Deals associated with Paid Search contacts.",
+  contacts: "Contacts from Paid Search sources in HubSpot created this month.",
+  deals: "Deals created this month (pipeline generated).",
   dealRate: "Deals ÷ Contacts. How often contacts become deals.",
-  won: "Deals closed as won this month.",
-  winRate: "Won Deals ÷ Total Deals. Close rate for deals.",
-  revenue: "Total revenue from closed-won deals this month.",
+  won: "Deals CLOSED WON this month (by close date), regardless of when the deal was created.",
+  winRate: "Won Deals (closed this month) ÷ Deals (created this month). Cross-period ratio — use directionally.",
+  revenue: "Revenue booked this month — sum of amounts on deals with a close date in this month and a Won stage.",
 };
 
 interface FunnelCardProps {
