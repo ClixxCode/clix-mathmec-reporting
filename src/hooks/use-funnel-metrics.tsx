@@ -82,32 +82,36 @@ export function useFunnelMetrics(): FunnelMetrics {
     },
   });
 
-  // Query all deals (they have linked contacts)
-  const { data: dealsData, isLoading: dealsLoading } = useQuery({
-    queryKey: ["funnel-deals", filters.startDate, filters.endDate],
+  // Pipeline: deals CREATED in this period (regardless of close status)
+  const { data: pipelineData, isLoading: pipelineLoading } = useQuery({
+    queryKey: ["funnel-deals-pipeline", filters.startDate, filters.endDate],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hubspot_deals")
         .select("deal_stage, amount")
         .gte("create_date", filters.startDate)
         .lte("create_date", filters.endDate + "T23:59:59");
-
       if (error) throw error;
+      return { totalDeals: data?.length || 0 };
+    },
+  });
 
-      const totalDeals = data?.length || 0;
-      const wonDeals = data?.filter((d) =>
+  // Won/Revenue: deals CLOSED WON in this period (by close_date)
+  const { data: wonData, isLoading: wonLoading } = useQuery({
+    queryKey: ["funnel-deals-won", filters.startDate, filters.endDate],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hubspot_deals")
+        .select("deal_stage, amount, close_date")
+        .gte("close_date", filters.startDate)
+        .lte("close_date", filters.endDate + "T23:59:59");
+      if (error) throw error;
+      const won = (data || []).filter((d) =>
         d.deal_stage?.toLowerCase().includes("won")
-      ) || [];
-      const wonCount = wonDeals.length;
-      const totalRevenue = wonDeals.reduce(
-        (sum, d) => sum + (Number(d.amount) || 0),
-        0
       );
-
       return {
-        totalDeals,
-        wonCount,
-        totalRevenue,
+        wonCount: won.length,
+        totalRevenue: won.reduce((s, d) => s + (Number(d.amount) || 0), 0),
       };
     },
   });
@@ -120,9 +124,9 @@ export function useFunnelMetrics(): FunnelMetrics {
 
   const contacts = contactsData?.total || 0;
   const formSubmissions = contactsData?.formSubmissions || 0;
-  const deals = dealsData?.totalDeals || 0;
-  const wonDeals = dealsData?.wonCount || 0;
-  const revenue = dealsData?.totalRevenue || 0;
+  const deals = pipelineData?.totalDeals || 0;
+  const wonDeals = wonData?.wonCount || 0;
+  const revenue = wonData?.totalRevenue || 0;
 
   // Top of funnel calculations
   const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
@@ -155,6 +159,6 @@ export function useFunnelMetrics(): FunnelMetrics {
     winRate,
     avgDealSize,
 
-    isLoading: adsLoading || contactsLoading || dealsLoading,
+    isLoading: adsLoading || contactsLoading || pipelineLoading || wonLoading,
   };
 }
