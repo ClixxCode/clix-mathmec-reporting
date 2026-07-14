@@ -52,7 +52,7 @@ function DashboardContent() {
   };
 
   const monthLabel = format(filters.selectedMonth, "MMMM yyyy");
-  const periodLabel = view === "monthly" ? monthLabel : "Q1 2026 vs Q1 2025";
+  const periodLabel = view === "monthly" || view === "quality" ? monthLabel : "Quarterly Review";
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
