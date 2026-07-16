@@ -1,91 +1,72 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const CLAUDE_MODEL = "claude-opus-4-8";
 
-async function callLovableAI({
-  lovableApiKey,
+async function callClaude({
+  anthropic,
   systemPrompt,
   userPrompt,
-  models,
 }: {
-  lovableApiKey: string;
+  anthropic: Anthropic;
   systemPrompt: string;
   userPrompt: string;
-  models: string[];
 }) {
-  const url = 'https://ai.gateway.lovable.dev/v1/chat/completions';
+  try {
+    // The SDK retries 429s and 5xx errors with backoff automatically.
+    const response = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 16000,
+      thinking: { type: "adaptive" },
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
 
-  for (const model of models) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const attemptLabel = `${model} (attempt ${attempt + 1}/2)`;
-      console.log(`Calling Lovable AI Gateway: ${attemptLabel}`);
-
-      const aiResponse = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
-          max_tokens: 3000,
-        }),
-      });
-
-      if (aiResponse.ok) {
-        const aiData = await aiResponse.json();
-        const narrativeText = aiData.choices?.[0]?.message?.content || '';
-        return { ok: true as const, narrativeText, modelUsed: model };
-      }
-
-      const errorText = await aiResponse.text();
-      console.error('AI Gateway error:', aiResponse.status, errorText);
-
-      if (aiResponse.status === 429) {
-        return {
-          ok: false as const,
-          status: 429,
-          message: 'Rate limit exceeded. Please try again in a moment.',
-          details: errorText,
-        };
-      }
-      if (aiResponse.status === 402) {
-        return {
-          ok: false as const,
-          status: 402,
-          message: 'AI credits exhausted. Please add credits to continue.',
-          details: errorText,
-        };
-      }
-
-      if (aiResponse.status >= 500 && attempt < 1) {
-        await sleep(400 * (attempt + 1));
-        continue;
-      }
-
-      break;
+    if (response.stop_reason === "refusal") {
+      return {
+        ok: false as const,
+        status: 200,
+        message: 'The AI declined to generate this narrative. Please review the input data and try again.',
+        details: null,
+      };
     }
-  }
 
-  return {
-    ok: false as const,
-    status: 502,
-    message: 'AI service temporarily unavailable. Please try again shortly.',
-    details: null,
-  };
+    const narrativeText = response.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('');
+    return { ok: true as const, narrativeText, modelUsed: CLAUDE_MODEL };
+  } catch (error) {
+    if (error instanceof Anthropic.RateLimitError) {
+      return {
+        ok: false as const,
+        status: 429,
+        message: 'Rate limit exceeded. Please try again in a moment.',
+        details: error.message,
+      };
+    }
+    if (error instanceof Anthropic.AuthenticationError) {
+      return {
+        ok: false as const,
+        status: 401,
+        message: 'AI is not configured correctly (invalid ANTHROPIC_API_KEY).',
+        details: error.message,
+      };
+    }
+    console.error('Claude API error:', error);
+    return {
+      ok: false as const,
+      status: 502,
+      message: 'AI service temporarily unavailable. Please try again shortly.',
+      details: error instanceof Error ? error.message : null,
+    };
+  }
 }
 
 serve(async (req) => {
@@ -105,15 +86,16 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
 
-    if (!lovableApiKey) {
+    if (!anthropicApiKey) {
       return new Response(
-        JSON.stringify({ error: 'AI is not configured (missing LOVABLE_API_KEY).' }),
+        JSON.stringify({ error: 'AI is not configured (missing ANTHROPIC_API_KEY).' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
+    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Parse month to get date range
@@ -493,11 +475,10 @@ ROAS (Revenue / Ad Spend): ${perfSummary.total_cost > 0 ? (dealSummary.total_rev
 
 Write a cohesive executive summary that tells the story of this month's marketing performance. Connect the dots between ad spend, lead quality, geographic performance, and revenue outcomes. Be specific with numbers but explain what they mean for the business. Include insights about which locations are performing best and any opportunities to optimize underperforming markets.`;
 
-    const aiResult = await callLovableAI({
-      lovableApiKey,
+    const aiResult = await callClaude({
+      anthropic,
       systemPrompt,
       userPrompt,
-      models: ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash', 'google/gemini-2.5-pro'],
     });
 
     if (!aiResult.ok) {

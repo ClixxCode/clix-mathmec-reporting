@@ -1,73 +1,66 @@
-# Welcome to your Lovable project
+# Mathews Mechanical — Marketing Performance Reporting
 
-## Project info
+A client-facing marketing performance dashboard for Mathews Mechanical, built and maintained by Clix. It reports on Google Ads spend, HubSpot contacts/deals/leads, CallTrackingMetrics phone attribution, and AI-generated campaign narratives.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Stack
 
-## How can I edit this code?
+- **Frontend:** Vite + React 18 + TypeScript, shadcn/ui (Radix + Tailwind), TanStack Query, Recharts
+- **Backend:** Supabase (Postgres + Edge Functions) — no separate server
+- **AI:** Claude API (`claude-opus-4-8`) for contact quality scoring and executive-summary narratives
+- **PDF export:** html2pdf.js (client-side)
 
-There are several ways of editing your application.
+## Architecture
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+Google Ads / HubSpot CSV exports ──▶ /admin drag-and-drop
+                                        │
+                                        ▼
+                             Supabase Edge Functions (import-*)
+                                        │  service-role upserts
+                                        ▼
+CallTrackingMetrics API ──▶ fetch-ctm-* ─▶ Postgres ◀── ai-score-contacts /
+                                        │              generate-campaign-narrative
+                                        ▼              (Claude API)
+                        React dashboard (direct PostgREST queries
+                        via @supabase/supabase-js + TanStack Query)
 ```
 
-**Edit a file directly in GitHub**
+- `/` — the client-facing report (Monthly, Quarterly, Quality Insights views)
+- `/admin` — data source management: CSV imports, CTM status, narrative generation
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Development
 
-**Use GitHub Codespaces**
+```sh
+npm install
+cp .env.example .env   # fill in your Supabase project values
+npm run dev            # http://localhost:8080
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Other scripts: `npm run build`, `npm run lint`, `npm test`.
 
-## What technologies are used for this project?
+## Environment variables (frontend)
 
-This project is built with:
+| Variable | Description |
+| --- | --- |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key |
+| `VITE_SUPABASE_PROJECT_ID` | Supabase project ref (used by tooling only) |
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Edge function secrets (Supabase)
 
-## How can I deploy this project?
+Set with `supabase secrets set` (or the dashboard):
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+| Secret | Used by |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | `ai-score-contacts`, `generate-campaign-narrative` |
+| `CTM_API_KEY`, `CTM_API_SECRET`, `CTM_ACCOUNT_ID` | `fetch-ctm-calls`, `fetch-ctm-account` |
 
-## Can I connect a custom domain to my Lovable project?
+`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are injected automatically by the platform.
 
-Yes, you can!
+## Deployment
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- **Database:** migrations live in `supabase/migrations/` — apply with `supabase db push`
+- **Edge functions:** `supabase functions deploy` (JWT verification is disabled per function in `supabase/config.toml`)
+- **Frontend:** any static host (Vercel recommended) — build with `npm run build`, output in `dist/`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+See `MIGRATION.md` for the runbook used to move this project off Lovable onto Clix-owned infrastructure.

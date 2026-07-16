@@ -1,12 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MODELS = ["google/gemini-3-flash-preview", "google/gemini-3.1-flash-lite-preview"];
+const CLAUDE_MODEL = "claude-opus-4-8";
 
 const BUCKET_SCORES: Record<string, number | null> = {
   likely_qualified: 22,
@@ -15,21 +16,27 @@ const BUCKET_SCORES: Record<string, number | null> = {
   insufficient_context: null,
 };
 
+const CLASSIFICATION_SCHEMA = {
+  type: "object",
+  properties: {
+    bucket: {
+      type: "string",
+      enum: ["likely_qualified", "likely_disqualified", "likely_spam", "insufficient_context"],
+    },
+    reason: {
+      type: "string",
+      description: "One short sentence, <=140 chars",
+    },
+  },
+  required: ["bucket", "reason"],
+  additionalProperties: false,
+} as const;
+
 const normalizePhone = (phone: string | null): string => {
   if (!phone) return "";
   const digits = phone.replace(/\D/g, "");
   return digits.startsWith("1") && digits.length === 11 ? digits.slice(1) : digits;
 };
-
-function extractJson(text: string): any {
-  if (!text) return null;
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = (fenced ? fenced[1] : text).trim();
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start === -1 || end === -1) return null;
-  try { return JSON.parse(candidate.slice(start, end + 1)); } catch { return null; }
-}
 
 function classifyFromRules(payload: { message: string | null; call_summary: string | null; product: string | null }): { bucket: string; reason: string } | null {
   const text = [payload.message, payload.product, payload.call_summary].filter(Boolean).join(" ").toLowerCase();
@@ -49,7 +56,7 @@ function classifyFromRules(payload: { message: string | null; call_summary: stri
   return null;
 }
 
-async function classify(lovableApiKey: string, payload: { message: string | null; call_summary: string | null; product: string | null }): Promise<{ bucket: string; reason: string } | null> {
+async function classify(anthropic: Anthropic, payload: { message: string | null; call_summary: string | null; product: string | null }): Promise<{ bucket: string; reason: string } | null> {
   const ruleResult = classifyFromRules(payload);
   if (ruleResult) return ruleResult;
 
@@ -57,44 +64,39 @@ async function classify(lovableApiKey: string, payload: { message: string | null
 - likely_qualified: real B2B prospect with a concrete fabrication/welding need (project, RFQ, drawings, materials, location, timeline).
 - likely_disqualified: real person but wrong fit (residential, one-off small repair, job seeker, vendor pitch, out-of-scope service like fall protection one-off, etc).
 - likely_spam: clearly junk, bot, gibberish, marketing/SEO outreach, or fraudulent.
-- insufficient_context: no message and no call summary, or content too thin to judge.
-Respond ONLY with strict JSON: {"bucket":"...","reason":"<one short sentence, <=140 chars>"}.`;
+- insufficient_context: no message and no call summary, or content too thin to judge.`;
 
   const user = `Form message: ${payload.message?.trim() || "(none)"}
 Product requested: ${payload.product?.trim() || "(unknown)"}
 Matched call summary: ${payload.call_summary?.trim() || "(no call matched)"}`;
 
-  for (const model of MODELS) {
-    try {
-      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { "Lovable-API-Key": lovableApiKey, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: "system", content: system }, { role: "user", content: user }],
-          temperature: 0.2,
-          max_tokens: 200,
-        }),
-      });
-      if (!r.ok) {
-        if (r.status === 429 || r.status === 402) {
-          await new Promise((res) => setTimeout(res, 1200));
-          continue;
-        }
-        console.error(`AI ${model} -> ${r.status}: ${await r.text()}`);
-        continue;
-      }
-      const data = await r.json();
-      const text = data.choices?.[0]?.message?.content || "";
-      const parsed = extractJson(text);
-      if (parsed && typeof parsed.bucket === "string") {
-        const bucket = parsed.bucket.toLowerCase().replace(/\s+/g, "_");
-        if (bucket in BUCKET_SCORES) {
-          return { bucket, reason: String(parsed.reason || "").slice(0, 200) };
-        }
-      }
-    } catch (e) {
-      console.error(`AI ${model} threw`, e);
+  try {
+    const response = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 2048,
+      thinking: { type: "adaptive" },
+      output_config: { format: { type: "json_schema", schema: CLASSIFICATION_SCHEMA } },
+      system,
+      messages: [{ role: "user", content: user }],
+    });
+
+    if (response.stop_reason === "refusal") {
+      console.error("Claude refused classification request");
+      return null;
+    }
+
+    const textBlock = response.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") return null;
+
+    const parsed = JSON.parse(textBlock.text);
+    if (parsed && typeof parsed.bucket === "string" && parsed.bucket in BUCKET_SCORES) {
+      return { bucket: parsed.bucket, reason: String(parsed.reason || "").slice(0, 200) };
+    }
+  } catch (e) {
+    if (e instanceof Anthropic.RateLimitError) {
+      console.error("Claude rate limited after retries");
+    } else {
+      console.error("Claude classification failed", e);
     }
   }
   return null;
@@ -105,8 +107,9 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
+    const anthropicApiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!anthropicApiKey) throw new Error("ANTHROPIC_API_KEY not configured");
+    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
 
     const body = await req.json().catch(() => ({}));
     const force: boolean = body?.force === true;
@@ -182,7 +185,7 @@ serve(async (req) => {
         result = { bucket: "insufficient_context", reason: "No form message and no matched call recording." };
         skipped_insufficient++;
       } else {
-        result = await classify(lovableApiKey, {
+        result = await classify(anthropic, {
           message,
           call_summary: callSummary,
           product: productByContact.get(c.record_id) || null,
