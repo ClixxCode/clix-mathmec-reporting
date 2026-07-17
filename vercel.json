@@ -1,3 +1,11 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "redirects": [
+    { "source": "/", "destination": "/mathews-mechanical/", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/mathews-mechanical/assets/:path*", "destination": "/assets/:path*" },
+    { "source": "/mathews-mechanical/favicon.gif", "destination": "/favicon.gif" },
+    { "source": "/mathews-mechanical/placeholder.svg", "destination": "/placeholder.svg" },
+    { "source": "/mathews-mechanical/:path*", "destination": "/index.html" }
+  ]
 }
