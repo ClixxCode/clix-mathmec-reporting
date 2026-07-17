@@ -10,12 +10,17 @@
  * Usage:
  *   SOURCE_SUPABASE_URL=https://hfzysrftppvxkxfgcumw.supabase.co \
  *   SOURCE_SUPABASE_ANON_KEY=eyJ... \
- *   DEST_SUPABASE_URL=https://<new-ref>.supabase.co \
+ *   DEST_SUPABASE_URL=https://meoytnnklgjfnqbngmgx.supabase.co \
  *   DEST_SUPABASE_SERVICE_ROLE_KEY=eyJ... \
+ *   DEST_SCHEMA=mathmec \
  *   node scripts/migrate-data.mjs [--dry-run] [--table <name>]
  *
- * Prerequisite: the schema must already exist in the destination project
- * (run `supabase db push` first — see MIGRATION.md).
+ * The initial 22,448-row copy was already performed server-side via pg_net
+ * (see MIGRATION.md). This script remains useful for delta top-ups if new
+ * rows land in the old project before final cutover — it upserts on primary
+ * key, so re-running is safe. DEST_SCHEMA targets a non-public destination
+ * schema via PostgREST's Content-Profile header (the schema must be in the
+ * project's exposed schemas list).
  */
 
 const TABLES = [
@@ -45,6 +50,7 @@ const SOURCE_URL = env("SOURCE_SUPABASE_URL");
 const SOURCE_KEY = env("SOURCE_SUPABASE_ANON_KEY");
 const DEST_URL = env("DEST_SUPABASE_URL");
 const DEST_KEY = env("DEST_SUPABASE_SERVICE_ROLE_KEY");
+const DEST_SCHEMA = process.env.DEST_SCHEMA || "public";
 
 const dryRun = process.argv.includes("--dry-run");
 const tableArgIdx = process.argv.indexOf("--table");
@@ -69,6 +75,7 @@ async function insertRows(table, rows) {
       apikey: DEST_KEY,
       Authorization: `Bearer ${DEST_KEY}`,
       "Content-Type": "application/json",
+      "Content-Profile": DEST_SCHEMA,
       // Upsert on primary key so the script is safe to re-run
       Prefer: "resolution=merge-duplicates,return=minimal",
     },

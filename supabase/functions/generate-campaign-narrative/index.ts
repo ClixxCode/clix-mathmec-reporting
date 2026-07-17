@@ -96,7 +96,7 @@ serve(async (req) => {
     }
 
     const anthropic = new Anthropic({ apiKey: anthropicApiKey });
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseKey, { db: { schema: "mathmec" } });
 
     // Parse month to get date range
     const [year, month] = month_year.split('-').map(Number);

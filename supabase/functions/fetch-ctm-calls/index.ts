@@ -68,7 +68,7 @@ serve(async (req) => {
       throw new Error('Supabase credentials not configured');
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { db: { schema: "mathmec" } });
 
     const { startDate, endDate } = await req.json();
 
