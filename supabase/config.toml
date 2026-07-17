@@ -1,4 +1,4 @@
-project_id = "hfzysrftppvxkxfgcumw"
+project_id = "meoytnnklgjfnqbngmgx"
 
 [functions.import-hubspot-contacts]
 verify_jwt = false
