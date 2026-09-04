@@ -175,12 +175,29 @@ serve(async (req) => {
       );
     }
 
+    // This table backs the Google Ads channel, so only paid search deals belong
+    // in it. Without the column there is no way to tell — an export that omits
+    // it once loaded Mathews' entire CRM (5,614 unattributable deals) and got
+    // reported against ad spend, so reject rather than import blind.
+    const trafficSourceIndex = headerIndexMap["Original Traffic Source"];
+    if (trafficSourceIndex === undefined) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "CSV must contain the 'Original Traffic Source' column — this report only holds paid search deals, and without that column they cannot be identified. Re-export from HubSpot with that property included.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const BATCH_SIZE = 100;
+    const PAID_SEARCH_SOURCE = "paid search";
     const seenDealIds = new Set<string>();
     let batch: Record<string, unknown>[] = [];
     let processed = 0;
     let skippedDuplicates = 0;
     let skippedEmpty = 0;
+    let skippedOtherSource = 0;
     let errors = 0;
 
     for (let rowIdx = headerRowIndex + 1; rowIdx < allRows.length; rowIdx++) {
@@ -198,6 +215,14 @@ serve(async (req) => {
         continue;
       }
       seenDealIds.add(dealId);
+
+      // Paid search only — a full-pipeline export is fine to upload, everything
+      // that isn't attributable to Google Ads is counted and left out.
+      const trafficSource = String(values[trafficSourceIndex] || "").trim();
+      if (trafficSource.toLowerCase() !== PAID_SEARCH_SOURCE) {
+        skippedOtherSource++;
+        continue;
+      }
 
       // Build raw_data with essential columns
       const rawData: Record<string, string> = {};
@@ -272,15 +297,16 @@ serve(async (req) => {
     }
 
     const validRows = processed + skippedDuplicates;
-    console.log(`Import complete: ${processed} processed, ${skippedDuplicates} duplicates, ${skippedEmpty} empty rows, ${errors} errors`);
+    console.log(`Import complete: ${processed} processed, ${skippedDuplicates} duplicates, ${skippedOtherSource} non-paid-search, ${skippedEmpty} empty rows, ${errors} errors`);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         summary: {
           total_rows: validRows,
           processed,
           duplicates: skippedDuplicates,
+          other_source: skippedOtherSource,
           empty_rows: skippedEmpty,
           errors,
         }

@@ -11,6 +11,7 @@ interface ImportSummary {
   total_rows: number;
   processed: number;
   duplicates: number;
+  other_source: number;
   empty_rows: number;
   errors: number;
 }
@@ -231,14 +232,18 @@ export function HubSpotDealsCard() {
               )}
               <span className="text-sm font-medium">Last Import</span>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-4 gap-2 text-center">
               <div>
                 <p className="text-lg font-bold text-gray-900">{lastImport.total_rows}</p>
                 <p className="text-xs text-gray-500">Total</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-green-600">{lastImport.processed}</p>
-                <p className="text-xs text-gray-500">Processed</p>
+                <p className="text-xs text-gray-500">Paid Search</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-gray-500">{lastImport.other_source ?? 0}</p>
+                <p className="text-xs text-gray-500">Other Source</p>
               </div>
               <div>
                 <p className="text-lg font-bold text-red-600">{lastImport.errors}</p>
@@ -259,7 +264,7 @@ export function HubSpotDealsCard() {
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2 text-gray-600">
                 <TrendingUp className="w-4 h-4" />
-                Total Deals
+                Paid Search Deals
               </span>
               <span className="font-semibold">{analytics.total_deals.toLocaleString()}</span>
             </div>
