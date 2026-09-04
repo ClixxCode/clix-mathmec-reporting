@@ -1,8 +1,8 @@
 // Mathews Mechanical management fee schedule.
 // October 2025: $1,355.04 (pro-rated onboarding month)
-// November 2025 onward: $1,750/month
+// November 2025 onward: $750/month
 
-const MONTHLY_FEE = 1750;
+const MONTHLY_FEE = 750;
 const OCT_2025_FEE = 1355.04;
 const FEE_START = new Date(Date.UTC(2025, 9, 1)); // Oct 1, 2025
 

@@ -589,7 +589,7 @@ function InvestmentSection({
     <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
       <h3 className="font-semibold text-foreground text-lg mb-1">Investment & Returns</h3>
       <p className="text-xs text-muted-foreground mb-4">
-        Investment = Google Ads spend + Mathews management fee ($1,750/month from Nov 2025; $1,355.04 for Oct 2025).
+        Investment = Google Ads spend + Mathews management fee ($750/month from Nov 2025; $1,355.04 for Oct 2025).
         No management fee applied to quarters before Oct 2025 (engagement began Oct 2025).
       </p>
       <div className="overflow-x-auto">

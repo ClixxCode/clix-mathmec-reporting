@@ -118,7 +118,7 @@ export function InvestmentReturns() {
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   Total investment = Google Ads spend + Mathews management fee
-                  ($1,355.04 for Oct 2025, $1,750/month from Nov 2025 onward, pro-rated by day).
+                  ($1,355.04 for Oct 2025, $750/month from Nov 2025 onward, pro-rated by day).
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
