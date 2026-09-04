@@ -52,7 +52,8 @@ Set with `supabase secrets set` (or the dashboard):
 
 | Secret | Used by |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | `ai-score-contacts`, `generate-campaign-narrative` |
+| `ANTHROPIC_API_KEY` | `ai-score-contacts` |
+| `AI_GATEWAY_API_KEY` | `generate-campaign-narrative` (via [Vercel AI Gateway](https://vercel.com/docs/ai-gateway), Anthropic-compatible endpoint) |
 | `CTM_API_KEY`, `CTM_API_SECRET`, `CTM_ACCOUNT_ID` | `fetch-ctm-calls`, `fetch-ctm-account` |
 
 `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are injected automatically by the platform.

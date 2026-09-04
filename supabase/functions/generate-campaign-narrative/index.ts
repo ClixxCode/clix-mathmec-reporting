@@ -7,7 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const CLAUDE_MODEL = "claude-opus-4-8";
+// Routed through the Vercel AI Gateway's Anthropic-compatible endpoint, which
+// uses provider/model slugs (dots for minor versions) instead of raw Anthropic IDs.
+const CLAUDE_MODEL = "anthropic/claude-opus-4.8";
 
 async function callClaude({
   anthropic,
@@ -55,7 +57,7 @@ async function callClaude({
       return {
         ok: false as const,
         status: 401,
-        message: 'AI is not configured correctly (invalid ANTHROPIC_API_KEY).',
+        message: 'AI is not configured correctly (invalid AI_GATEWAY_API_KEY).',
         details: error.message,
       };
     }
@@ -86,16 +88,16 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    const gatewayApiKey = Deno.env.get('AI_GATEWAY_API_KEY');
 
-    if (!anthropicApiKey) {
+    if (!gatewayApiKey) {
       return new Response(
-        JSON.stringify({ error: 'AI is not configured (missing ANTHROPIC_API_KEY).' }),
+        JSON.stringify({ error: 'AI is not configured (missing AI_GATEWAY_API_KEY).' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+    const anthropic = new Anthropic({ apiKey: gatewayApiKey, baseURL: 'https://ai-gateway.vercel.sh' });
     const supabase = createClient(supabaseUrl, supabaseKey, { db: { schema: "mathmec" } });
 
     // Parse month to get date range
