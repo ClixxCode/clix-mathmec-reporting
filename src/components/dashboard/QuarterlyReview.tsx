@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PAID_SEARCH_SOURCE } from "@/lib/channels";
 import { ArrowDownRight, ArrowUpRight, Users, DollarSign, Briefcase, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { managementFeeBetween, fmtUSD } from "@/lib/investment";
@@ -44,17 +45,22 @@ async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
   async function fetchAll<T>(
     table: "hubspot_contacts" | "hubspot_deals",
     columns: string,
-    dateCol: string
+    dateCol: string,
+    paidSearchOnly = false
   ): Promise<T[]> {
     const pageSize = 1000;
     let from = 0;
     const out: T[] = [];
     while (true) {
-      const { data, error } = await supabase
+      let query = supabase
         .from(table)
         .select(columns)
         .gte(dateCol, start)
-        .lt(dateCol, end)
+        .lt(dateCol, end);
+      if (paidSearchOnly) {
+        query = query.eq("original_traffic_source", PAID_SEARCH_SOURCE);
+      }
+      const { data, error } = await query
         .range(from, from + pageSize - 1);
       if (error) throw error;
       const rows = (data ?? []) as T[];
@@ -74,15 +80,18 @@ async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
     fetchAll<DealRow>(
       "hubspot_deals",
       "deal_id, deal_name, amount, deal_stage, create_date, original_traffic_source",
-      "create_date"
+      "create_date",
+      true
     ),
   ]);
 
-  // Won revenue = deals CLOSED WON in this quarter (by close_date), regardless of when created.
+  // Won revenue = Paid Search deals CLOSED WON in this quarter (by close_date),
+  // regardless of when created.
   const wonDealsClosed = await fetchAll<DealRow>(
     "hubspot_deals",
     "deal_id, deal_name, amount, deal_stage, create_date, original_traffic_source",
-    "close_date"
+    "close_date",
+    true
   );
 
   const { data: adsData, error: adsErr } = await supabase
@@ -107,7 +116,7 @@ async function fetchQuarter(start: string, end: string): Promise<QuarterStats> {
     deals,
     bySource,
     pipeline: deals.reduce((s, d) => s + (Number(d.amount) || 0), 0),
-    paidContacts: contacts.filter((c) => c.original_traffic_source === "Paid Search"),
+    paidContacts: contacts.filter((c) => c.original_traffic_source === PAID_SEARCH_SOURCE),
     adSpend,
     wonRevenue,
   };
@@ -362,7 +371,7 @@ export function QuarterlyReview() {
       </div>
 
       <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-        <strong>Note:</strong> Quarterly data spans all traffic sources from HubSpot (contacts and deals). Pipeline value sums the deal amount of all deals created in the quarter.
+        <strong>Note:</strong> Deal, pipeline and won-revenue figures cover Paid Search (Google Ads) attribution only. Contact counts are shown for all HubSpot traffic sources as context, with Paid Search broken out separately. Pipeline value sums the deal amount of Paid Search deals created in the quarter.
       </div>
 
       <DrillDialog

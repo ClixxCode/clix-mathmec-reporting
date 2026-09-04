@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PAID_SEARCH_SOURCE } from "@/lib/channels";
 import { useDashboardFilters } from "./use-dashboard-filters";
 
 export interface FunnelMetrics {
@@ -63,7 +64,7 @@ export function useFunnelMetrics(): FunnelMetrics {
       const { data, error } = await supabase
         .from("hubspot_contacts")
         .select("raw_data")
-        .ilike("original_traffic_source", "Paid Search")
+        .ilike("original_traffic_source", PAID_SEARCH_SOURCE)
         .gte("hubspot_create_date", filters.startDate)
         .lte("hubspot_create_date", filters.endDate + "T23:59:59");
 
@@ -82,13 +83,14 @@ export function useFunnelMetrics(): FunnelMetrics {
     },
   });
 
-  // Pipeline: deals CREATED in this period (regardless of close status)
+  // Pipeline: Paid Search deals CREATED in this period (regardless of close status)
   const { data: pipelineData, isLoading: pipelineLoading } = useQuery({
     queryKey: ["funnel-deals-pipeline", filters.startDate, filters.endDate],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hubspot_deals")
         .select("deal_stage, amount")
+        .eq("original_traffic_source", PAID_SEARCH_SOURCE)
         .gte("create_date", filters.startDate)
         .lte("create_date", filters.endDate + "T23:59:59");
       if (error) throw error;
@@ -96,13 +98,14 @@ export function useFunnelMetrics(): FunnelMetrics {
     },
   });
 
-  // Won/Revenue: deals CLOSED WON in this period (by close_date)
+  // Won/Revenue: Paid Search deals CLOSED WON in this period (by close_date)
   const { data: wonData, isLoading: wonLoading } = useQuery({
     queryKey: ["funnel-deals-won", filters.startDate, filters.endDate],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hubspot_deals")
         .select("deal_stage, amount, close_date")
+        .eq("original_traffic_source", PAID_SEARCH_SOURCE)
         .gte("close_date", filters.startDate)
         .lte("close_date", filters.endDate + "T23:59:59");
       if (error) throw error;

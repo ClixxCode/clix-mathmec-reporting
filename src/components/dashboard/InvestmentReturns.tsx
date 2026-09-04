@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters";
+import { PAID_SEARCH_SOURCE } from "@/lib/channels";
 import { managementFeeBetween, fmtUSD } from "@/lib/investment";
 import { DollarSign, TrendingUp, Users, Briefcase, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -40,12 +41,13 @@ async function fetchPeriod(start: Date, end: Date) {
     supabase
       .from("hubspot_contacts")
       .select("record_id", { count: "exact", head: true })
-      .eq("original_traffic_source", "Paid Search")
+      .eq("original_traffic_source", PAID_SEARCH_SOURCE)
       .gte("hubspot_create_date", start.toISOString())
       .lt("hubspot_create_date", end.toISOString()),
     supabase
       .from("hubspot_deals")
       .select("amount, deal_stage")
+      .eq("original_traffic_source", PAID_SEARCH_SOURCE)
       .gte("create_date", start.toISOString())
       .lt("create_date", end.toISOString()),
   ]);

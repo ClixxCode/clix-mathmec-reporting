@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PAID_SEARCH_SOURCE } from "@/lib/channels";
 import { useDashboardFilters } from "./use-dashboard-filters";
 
 interface CampaignPerformance {
@@ -63,7 +64,7 @@ export function useCampaignPerformance() {
       const { data, error } = await supabase
         .from("hubspot_contacts")
         .select("traffic_source_drill_down_1")
-        .ilike("original_traffic_source", "Paid Search")
+        .ilike("original_traffic_source", PAID_SEARCH_SOURCE)
         .gte("hubspot_create_date", startDate.toISOString())
         .lte("hubspot_create_date", endDate.toISOString());
 
@@ -79,7 +80,7 @@ export function useCampaignPerformance() {
       const { data, error } = await supabase
         .from("hubspot_deals")
         .select("traffic_source_drill_down_1, amount")
-        .ilike("original_traffic_source", "Paid Search")
+        .ilike("original_traffic_source", PAID_SEARCH_SOURCE)
         .gte("create_date", startDate.toISOString())
         .lte("create_date", endDate.toISOString());
 

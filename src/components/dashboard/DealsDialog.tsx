@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PAID_SEARCH_SOURCE } from "@/lib/channels";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,7 @@ export function DealsDialog({ open, onOpenChange, month, wonOnly = false }: Deal
       let query = supabase
         .from("hubspot_deals")
         .select("id, deal_name, deal_stage, amount, create_date, close_date, associated_contact_id, traffic_source_drill_down_1, traffic_source_drill_down_2")
+        .eq("original_traffic_source", PAID_SEARCH_SOURCE)
         .gte(dateCol, startDate.toISOString())
         .lte(dateCol, endDate.toISOString())
         .order(dateCol, { ascending: false });
