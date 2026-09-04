@@ -10,7 +10,7 @@ import { ExecutiveSummaryDesktop, ExecutiveSummaryMobile } from "@/components/da
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { QuarterlyReview } from "@/components/dashboard/QuarterlyReview";
 import { DashboardFiltersProvider, useDashboardFilters } from "@/hooks/use-dashboard-filters";
-import { Download, Loader2, CalendarDays, CalendarRange, FlaskConical } from "lucide-react";
+import { Download, Loader2, CalendarDays, CalendarRange, FlaskConical, Search, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import mathmecLogo from "@/assets/mathews-logo-white.png";
@@ -59,48 +59,70 @@ function DashboardContent() {
       {/* Left Sidebar */}
       <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-gray-200 bg-white">
         <div className="px-4 py-5 border-b border-gray-200">
-          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Reports</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-gray-500">Channel Metrics</div>
         </div>
-        <nav className="flex-1 p-3 space-y-1">
-          <button
-            onClick={() => setView("monthly")}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-              view === "monthly"
-                ? "bg-primary/10 text-primary"
-                : "text-gray-700 hover:bg-gray-100"
-            )}
-          >
-            <CalendarDays className="w-4 h-4" />
-            Monthly Review
-          </button>
-          <button
-            onClick={() => setView("quarterly")}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-              view === "quarterly"
-                ? "bg-primary/10 text-primary"
-                : "text-gray-700 hover:bg-gray-100"
-            )}
-          >
-            <CalendarRange className="w-4 h-4" />
-            Quarterly Review
-          </button>
-          <button
-            onClick={() => setView("quality")}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-              view === "quality"
-                ? "bg-primary/10 text-primary"
-                : "text-gray-700 hover:bg-gray-100"
-            )}
-          >
-            <FlaskConical className="w-4 h-4" />
-            <span className="flex-1 text-left">Quality Insights</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
-              Beta
-            </span>
-          </button>
+        <nav className="flex-1 p-3 space-y-4">
+          {/* Google Ads — paid search. All paid-search-attributed data lives here. */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              <Search className="w-3.5 h-3.5" />
+              Google Ads
+            </div>
+            <button
+              onClick={() => setView("monthly")}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                view === "monthly"
+                  ? "bg-primary/10 text-primary"
+                  : "text-gray-700 hover:bg-gray-100"
+              )}
+            >
+              <CalendarDays className="w-4 h-4" />
+              Monthly Review
+            </button>
+            <button
+              onClick={() => setView("quarterly")}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                view === "quarterly"
+                  ? "bg-primary/10 text-primary"
+                  : "text-gray-700 hover:bg-gray-100"
+              )}
+            >
+              <CalendarRange className="w-4 h-4" />
+              Quarterly Review
+            </button>
+            <button
+              onClick={() => setView("quality")}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                view === "quality"
+                  ? "bg-primary/10 text-primary"
+                  : "text-gray-700 hover:bg-gray-100"
+              )}
+            >
+              <FlaskConical className="w-4 h-4" />
+              <span className="flex-1 text-left">Quality Insights</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                Beta
+              </span>
+            </button>
+          </div>
+
+          {/* Local SEO/AEO — not yet wired up. */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              <MapPin className="w-3.5 h-3.5" />
+              Local SEO/AEO
+            </div>
+            <div
+              aria-disabled="true"
+              title="Coming soon"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed select-none"
+            >
+              <span className="flex-1 text-left">Coming soon</span>
+            </div>
+          </div>
         </nav>
       </aside>
 
@@ -189,7 +211,7 @@ function DashboardContent() {
       <main className="container py-8 space-y-8">
         <QuarterlyReview />
         <footer className="text-center text-sm text-gray-400 py-6 border-t border-gray-200">
-          <p>Quarterly review for Mathews Mechanical • Data source: HubSpot</p>
+          <p>Quarterly review for Mathews Mechanical • Data source: HubSpot (Paid Search)</p>
           <Link to="/admin" className="text-gray-400 hover:text-gray-600 transition-colors mt-2 inline-block">
             Admin
           </Link>
