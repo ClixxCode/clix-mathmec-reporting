@@ -3,6 +3,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters";
 import { format } from "date-fns";
@@ -31,6 +32,20 @@ function useNarrativeData() {
   });
 }
 
+// Edge functions return a generic "non-2xx status code" message on HTTP errors;
+// the actual reason is in the response body, so pull it out for display.
+async function describeFunctionError(error: unknown): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      if (body?.error) return body.error as string;
+    } catch {
+      // Body wasn't JSON (or already consumed) - fall through to the generic message.
+    }
+  }
+  return error instanceof Error ? error.message : "Something went wrong";
+}
+
 // Generate AI summary
 function useGenerateSummary() {
   const { filters } = useDashboardFilters();
@@ -43,7 +58,7 @@ function useGenerateSummary() {
         body: { month_year: monthYear },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(await describeFunctionError(error));
       if (!data.success && data.error) throw new Error(data.error);
       return data;
     },
